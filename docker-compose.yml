@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: ecosystem_postgis
+    environment:
+      POSTGRES_USER: ecosystem_user
+      POSTGRES_PASSWORD: ecosystem_pass_2026
+      POSTGRES_DB: ecosystem_rimac_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgis_data:
