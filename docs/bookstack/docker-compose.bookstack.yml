@@ -1,0 +1,28 @@
+services:
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:latest
+    container_name: bookstack_app
+    environment:
+      PUID=1000
+      PGID=1000
+      APP_URL=http://127.0.0.1:3000
+      DB_HOST=bookstack_db
+      DB_USER=bookstack_user
+      DB_PASS=bookstack_pass_2026
+      DB_DATABASE=bookstack_db
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+  bookstack_db:
+    image: mariadb:10.6
+    container_name: bookstack_db
+    environment:
+      MYSQL_ROOT_PASSWORD=root_pass_2026
+      MYSQL_DATABASE=bookstack_db
+      MYSQL_USER=bookstack_user
+      MYSQL_PASSWORD=bookstack_pass_2026
+    volumes:
+      - bookstack_data:/var/lib/mysql
+    restart: unless-stopped
+volumes:
+  bookstack_data:
