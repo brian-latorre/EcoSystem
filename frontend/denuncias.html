@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoSystem - Reporte de Basura Abandonada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center justify-center p-4">
+    
+    <!-- Contenedor Principal Estilo Tarjeta Prototipo -->
+    <div class="max-w-lg w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+        
+        <!-- Cabecera de Marca -->
+        <div class="text-center mb-6">
+            <span class="text-xs font-bold tracking-wider text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full">Fiscalización Ambiental</span>
+            <h1 class="text-2xl font-extrabold text-slate-900 mt-2">EcoSystem</h1>
+            <p class="text-xs text-slate-500 mt-1">Recicla hoy, mejora mañana</p>
+        </div>
+
+        <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+            <span></span> Registrar Denuncia de Basura Abandonada
+        </h2>
+
+        <form id="wasteForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Descripción del residuo:</label>
+                <textarea id="desc" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" rows="3" placeholder="Ej. Acumulación de desmonte y bolsas rotas" required></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Referencia de dirección:</label>
+                <input id="ref" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" placeholder="Ej. Cruce Jr. Tarapacá con Av. Alcázar" required>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase">Latitud:</label>
+                    <input id="lat" type="text" value="-12.0251" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-mono text-slate-700">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase">Longitud:</label>
+                    <input id="lon" type="text" value="-77.0312" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-mono text-slate-700">
+                </div>
+            </div>
+
+            <button type="button" id="btnGps" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-semibold text-xs uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-2">
+                <span></span> Capturar Coordenadas GPS Actuales
+            </button>
+
+            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
+                Enviar Reporte Ciudadano
+            </button>
+        </form>
+
+        <div id="statusMsg" class="mt-4 text-center text-sm font-medium hidden p-3 rounded-xl"></div>
+    </div>
+
+    <!-- Pie de página institucional -->
+    <p class="text-xs text-slate-400 mt-6">Municipalidad Distrital del Rímac • Proyecto EcoSystem</p>
+
+    <script>
+    const btnGps = document.getElementById('btnGps');
+    const latInput = document.getElementById('lat');
+    const lonInput = document.getElementById('lon');
+    const form = document.getElementById('wasteForm');
+    const statusMsg = document.getElementById('statusMsg');
+
+    btnGps.addEventListener('click', () => {
+        if ("geolocation" in navigator) {
+            btnGps.innerText = "Obteniendo ubicación...";
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    latInput.value = pos.coords.latitude.toFixed(6);
+                    lonInput.value = pos.coords.longitude.toFixed(6);
+                    btnGps.innerText = "Coordenadas Capturadas ✓";
+                    btnGps.classList.replace('bg-emerald-600', 'bg-teal-700');
+                },
+                (err) => {
+                    alert("No se pudo obtener la ubicación GPS: " + err.message);
+                    btnGps.innerText = "Capturar Coordenadas GPS";
+                },
+                { enableHighAccuracy: true }
+            );
+        } else {
+            alert("Tu navegador no soporta geolocalización.");
+        }
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            citizen_id: 1,
+            description: document.getElementById('desc').value,
+            photo_evidence_url: "/static/uploads/denuncia_demo.jpg",
+            address_reference: document.getElementById('ref').value,
+            latitude: parseFloat(latInput.value),
+            longitude: parseFloat(lonInput.value)
+        };
+        try {
+            const res = await fetch(" http://127.0.0.1:8000/api/v1/waste-reports/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                statusMsg.innerText = "¡Reporte registrado correctamente en PostGIS!";
+                statusMsg.className = "mt-4 text-center text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 p-3 rounded-xl";
+                statusMsg.classList.remove("hidden");
+                form.reset();
+                btnGps.innerText = "Capturar Coordenadas GPS Actuales";
+                btnGps.classList.replace('bg-teal-700', 'bg-emerald-600');
+            } else {
+                throw new Error("Error en servidor");
+            }
+        } catch (err) {
+            statusMsg.innerText = "Error al enviar la denuncia. Asegúrate de que el backend esté encendido.";
+            statusMsg.className = "mt-4 text-center text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200 p-3 rounded-xl";
+            statusMsg.classList.remove("hidden");
+        }
+    });
+    </script>
+</body>
+</html>
