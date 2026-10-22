@@ -108,3 +108,51 @@ def delete_container(
             detail="Contenedor no encontrado o ya inactivo"
         )
 
+# GET: Contenedores cercanos en GeoJSON
+@router.get("/nearby/geojson")
+def get_nearby_containers_geojson(
+    lat: float = Query(-12.033, ge=-90.0, le=90.0),
+    lon: float = Query(-77.029, ge=-180.0, le=180.0),
+    radius_m: float = Query(
+        2500.0,
+        ge=100.0,
+        le=10000.0
+    ),
+    db: Session = Depends(get_db)
+):
+    repo = ContainerRepository(db)
+
+    containers = repo.find_nearby(
+        lat=lat,
+        lon=lon,
+        radius_m=radius_m
+    )
+
+    features = []
+
+    for container in containers:
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    container.longitude,
+                    container.latitude
+                ]
+            },
+            "properties": {
+                "id": container.id,
+                "code": container.code,
+                "name": container.name,
+                "address": container.address,
+                "status": container.status,
+                "capacity_kg": container.capacity_kg,
+                "current_reports_count":
+                    container.current_reports_count
+            }
+        })
+
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }

@@ -161,3 +161,8 @@ def clean_test_containers():
 def client():
     with TestClient(test_app) as test_client:
         yield test_client
+
+# Fixture para la sesión de base de datos de prueba
+@pytest.fixture
+def db_engine():
+    return test_engine
