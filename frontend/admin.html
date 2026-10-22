@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>EcoSystem - Panel de Gobernanza y Políticas de Negocio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white p-5 rounded border border-gray-300">
+      <h2 class="text-xl font-bold">Gobernanza Municipal - Políticas de Negocio (RF-018)</h2>
+      <p class="text-sm text-gray-600">Actualización en caliente de parámetros y multiplicadores</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-5 rounded border border-gray-300 space-y-3">
+        <h3 class="font-semibold text-gray-800">Actualizar Umbral de Reportes (RF-004)</h3>
+        <input id="threshVal" type="number" value="3" class="w-full bg-gray-50 border border-gray-300
+rounded p-2">
+        <button onclick="updateThreshold()" class="w-full bg-gray-900 text-white hover:bg-gray-800
+py-2 rounded font-semibold text-sm">
+          Guardar Umbral
+        </button>
+      </div>
+      <div class="bg-white p-5 rounded border border-gray-300 space-y-3">
+        <h3 class="font-semibold text-gray-800">Actualizar Multiplicador de Puntos (RF-018)</h3>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="matType" type="text" value="PLASTICO" class="bg-gray-50 border border-gray-300
+rounded p-2">
+          <input id="matPts" type="number" value="5" class="bg-gray-50 border border-gray-300 rounded
+p-2">
+        </div>
+        <button onclick="saveMultiplier()" class="w-full bg-gray-900 text-white hover:bg-gray-800 py-
+2 rounded font-semibold text-sm">
+          Guardar Multiplicador
+        </button>
+      </div>
+    </div>
+    <div class="bg-white p-5 rounded border border-gray-300">
+      <h3 class="font-semibold mb-2 text-gray-800 border-b pb-1">Políticas Activas en Base de
+Datos</h3>
+      <pre id="policiesOut" class="bg-gray-50 p-3 rounded text-xs text-gray-800 border border-gray-
+200 overflow-x-auto"></pre>
+    </div>
+  </div>
+  <script>
+    const API = "http://127.0.0.1:8000/api/v1/governance";
+    async function loadPolicies() {
+      const res = await fetch(`${API}/policies`);
+      const data = await res.json();
+      document.getElementById('policiesOut').innerText = JSON.stringify(data, null, 2);
+    }
+    async function updateThreshold() {
+      const val = parseFloat(document.getElementById('threshVal').value || '3');
+      await fetch(`${API}/policies/parameters/DEFAULT_CONTAINER_REPORT_THRESHOLD`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ param_value: val, description: 'Umbral mínimo de reportes ciudadanos'
+})
+      });
+      loadPolicies();
+    }
+    async function saveMultiplier() {
+      const mat = document.getElementById('matType').value;
+      const pts = parseInt(document.getElementById('matPts').value || '5');
+      await fetch(`${API}/policies/multipliers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ material_type: mat, points_per_kg: pts, co2_saved_per_kg: 1.45 })
+      });
+      loadPolicies();
+    }
+    loadPolicies();
+  </script>
+</body>
+</html>
