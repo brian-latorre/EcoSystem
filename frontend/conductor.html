@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>EcoSystem - Ruta Óptima del Conductor (TSP)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen p-6">
+  <div class="max-w-5xl mx-auto space-y-4">
+    <div class="flex items-center justify-between bg-white p-4 rounded border border-gray-300">
+      <div>
+        <h2 class="text-xl font-bold">Hoja de Ruta Diaria — Camión Recolector (Rímac)</h2>
+        <p id="summary" class="text-sm text-gray-600">Cargando cálculo algorítmico TSP...</p>
+      </div>
+      <select id="modeSelect" class="bg-gray-50 border border-gray-300 rounded px-3 py-2 text-sm">
+        <option value="haversine">Estrategia 1: Nearest Neighbor (Haversine)</option>
+        <option value="road">Estrategia 2: Red Vial (Adapter)</option>
+      </select>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div id="map" class="md:col-span-2 h-96 rounded border border-gray-300"></div>
+      <div class="bg-white p-4 rounded border border-gray-300 overflow-y-auto h-96">
+        <h3 class="font-semibold mb-3 border-b pb-1">Secuencia de Paradas</h3>
+        <ol id="stopsList" class="space-y-2 text-sm"></ol>
+      </div>
+    </div>
+  </div>
+  <script>
+    const map = L.map('map').setView([-12.033, -77.029], 14);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
+    }).addTo(map);
+    let routeLayer = L.layerGroup().addTo(map);
+
+    async function loadRoute(mode = 'haversine') {
+      routeLayer.clearLayers();
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/routes/optimal-daily?mode=${mode}`);
+      const data = await res.json();
+      document.getElementById('summary').innerText =
+        `Algoritmo: ${data.algorithm} | Paradas: ${data.total_stops} | Distancia: ${data.total_distance_km} km | Tiempo Est.: ${data.estimated_total_minutes} min`;
+
+      const coords = [[-12.0298, -77.0285]];
+      L.marker([-12.0298, -77.0285]).addTo(routeLayer).bindPopup("<b>Cochera Municipal (Inicio)</b>");
+
+      const listEl = document.getElementById('stopsList');
+      listEl.innerHTML = '';
+      data.ordered_stops.forEach(s => {
+        coords.push([s.latitude, s.longitude]);
+        L.marker([s.latitude, s.longitude]).addTo(routeLayer)
+          .bindPopup(`<b>Parada #${s.sequence_order}: ${s.container_code}</b><br>${s.address}`);
+        listEl.innerHTML += `<li class="p-2 bg-gray-50 rounded border border-gray-200">
+          <span class="font-bold">#${s.sequence_order} ${s.container_code}</span><br>
+          <span class="text-xs text-gray-600">${s.address} (+${s.leg_distance_km} km)</span>
+        </li>`;
+      });
+      L.polyline(coords, { color: '#0f172a', weight: 4 }).addTo(routeLayer);
+    }
+    document.getElementById('modeSelect').addEventListener('change', e => loadRoute(e.target.value));
+    loadRoute();
+  </script>
+</body>
+</html>
