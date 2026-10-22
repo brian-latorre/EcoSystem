@@ -4,6 +4,7 @@ from sqlalchemy import Integer, String, Boolean, select
 from sqlalchemy.orm import Session, Mapped, mapped_column
 from app.core.database import Base
 from app.modules.governance.schemas import StaffCreateInput
+
 try:
     from app.modules.auth.models import User
 except ImportError:
@@ -18,30 +19,34 @@ except ImportError:
         zone_sector: Mapped[str] = mapped_column(String(80), default="Rímac Centro", nullable=False)
         eco_points_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
         is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    class GovernanceStaffRepository:
-        def __init__(self, db: Session):
-            self.db = db
-        def create_staff(self, payload: StaffCreateInput) -> User:
-            pwd_hash = hashlib.sha256(payload.password.encode()).hexdigest()
-            user = User(
+
+class GovernanceStaffRepository:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def create_staff(self, payload: StaffCreateInput) -> User:
+        pwd_hash = hashlib.sha256(payload.password.encode()).hexdigest()
+        user = User(
             full_name=payload.full_name,
             email=payload.email,
             password_hash=pwd_hash,
             role=payload.role.upper(),
             zone_sector=payload.zone_sector,
             is_active=True
-            )
-            self.db.add(user)
+        )
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def list_staff(self) -> List[User]:
+        stmt = select(User).where(User.role.in_(["COORDINADOR", "SUPERVISOR"]))
+        return list(self.db.scalars(stmt).all())
+
+    def deactivate_staff(self, user_id: int) -> bool:
+        user = self.db.get(User, user_id)
+        if user:
+            user.is_active = False
             self.db.commit()
-            self.db.refresh(user)
-            return user
-        def list_staff(self) -> List[User]:
-            stmt = select(User).where(User.role.in_(["COORDINADOR", "SUPERVISOR"]))
-            return list(self.db.scalars(stmt).all())
-        def deactivate_staff(self, user_id: int) -> bool:
-            user = self.db.get(User, user_id)
-            if user:
-                user.is_active = False
-                self.db.commit()
             return True
-            return False
+        return False
