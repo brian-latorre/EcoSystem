@@ -9,7 +9,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from app.core.config import get_settings
 from app.core.database import Base, get_db
-from app.modules.containers.models import (Container, ContainerCitizenReport, DistrictBoundary)
+from app.modules.containers.models import (Container, ContainerCitizenReport, ContainerFullEvent, DistrictBoundary)
 from app.modules.containers.router import router
 
 # Base de Datos de Pruebas
@@ -39,6 +39,7 @@ TABLES = [
     DistrictBoundary.__table__,
     Container.__table__,
     ContainerCitizenReport.__table__,
+    ContainerFullEvent.__table__,
 ]
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -130,14 +131,17 @@ def prepare_test_database():
 
     test_engine.dispose()
 
-# Limpiar los datos de prueba después de cada test
+
+# Limpiar los datos de prueba antes y después de cada test
 @pytest.fixture(autouse=True)
 def clean_test_containers():
 
+    # Limpieza inicial
     with test_engine.begin() as conn:
         conn.execute(
             text("""
                 TRUNCATE TABLE
+                    container_full_events,
                     container_citizen_reports,
                     containers
                 RESTART IDENTITY CASCADE
@@ -146,10 +150,12 @@ def clean_test_containers():
 
     yield
 
+    # Limpieza final
     with test_engine.begin() as conn:
         conn.execute(
             text("""
                 TRUNCATE TABLE
+                    container_full_events,
                     container_citizen_reports,
                     containers
                 RESTART IDENTITY CASCADE

@@ -4,11 +4,17 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.modules.containers.schemas import (ContainerCreate, ContainerResponse, ContainerUpdate)
 from app.modules.containers.repository import ContainerRepository
+from pydantic import BaseModel, Field
+from app.modules.containers.service import ContainerThresholdService
 
 router = APIRouter(
     prefix="/containers",
     tags=["Gestión Geoespacial de Contenedores"]
 )
+
+# GET: Contenedores cercanos en GeoJSON
+class ReportFullInput(BaseModel):
+    citizen_id: int = Field(..., gt=0)
 
 # POST: Registrar un nuevo contenedor
 @router.post(
@@ -156,3 +162,20 @@ def get_nearby_containers_geojson(
         "type": "FeatureCollection",
         "features": features
     }
+
+# POST: Reportar un contenedor lleno
+@router.post(
+    "/{container_id}/report-full",
+    status_code=status.HTTP_200_OK
+)
+def report_container_full(
+    container_id: int,
+    payload: ReportFullInput,
+    db: Session = Depends(get_db)
+):
+    service = ContainerThresholdService(db)
+
+    return service.report_container_full(
+        container_id=container_id,
+        citizen_id=payload.citizen_id
+    )
