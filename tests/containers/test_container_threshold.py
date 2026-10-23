@@ -169,8 +169,7 @@ def test_concurrent_reports(container_id):
 # Tests para verificar que un ciudadano no pueda reportar dos veces el mismo contenedor de manera concurrente
 def test_concurrent_duplicate_votes(container_id):
     """
-    Dos peticiones simultáneas del mismo ciudadano
-    deben producir un solo voto válido.
+    Dos peticiones simultáneas del mismo ciudadano deben producir un solo voto válido.
     """
     from fastapi import HTTPException
 
@@ -219,7 +218,7 @@ def test_concurrent_duplicate_votes(container_id):
 
 # Tests para verificar que un contenedor lleno genera un evento de "contenedor lleno"
 def test_full_container_generates_one_event(client, container_id):
-    # Reportar dos veces sin alcanzar el umbral no genera evento
+    # Reportes de ciudadanos que no alcanzan el umbral
     for citizen_id in (10, 11):
         response = report(client, container_id, citizen_id)
         assert response.status_code == 200
@@ -233,7 +232,7 @@ def test_full_container_generates_one_event(client, container_id):
 
         assert len(events) == 0
 
-    # El tercer reporte alcanza el umbral y genera un evento
+    # El contenedor pasa a LLENO
     response = report(client, container_id, 12)
 
     assert response.status_code == 200
@@ -250,7 +249,7 @@ def test_full_container_generates_one_event(client, container_id):
         assert events[0].event_type == "container.full"
         assert events[0].processed_at is None
 
-    # Un cuarto reporte no genera un segundo evento
+    # No se registra otro evento
     response = report(client, container_id, 13)
     assert response.status_code == 409
 

@@ -1,0 +1,361 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoSystem - Mapa Ciudadano</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    #map {
+      width: 100%;
+      height: 520px;
+      border-radius: 0.75rem;
+    }
+    .leaflet-container {
+      z-index: 1;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Encabezado -->
+    <header class="bg-white rounded-2xl shadow-md border border-slate-100 p-6 text-center">
+      <span class="text-xs font-bold tracking-wider text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full">
+        Gestión Ambiental Ciudadana
+      </span>
+
+      <h1 class="text-3xl font-extrabold text-slate-900 mt-3">
+        EcoSystem
+      </h1>
+
+      <p class="text-xs text-slate-500 mt-1">
+        Recicla hoy, mejora mañana
+      </p>
+
+      <h2 class="text-lg font-bold mt-4">
+        Mapa de Contenedores del Rímac
+      </h2>
+    </header>
+
+    <!-- Indicadores -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+      <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-100 text-center">
+        <p class="text-sm text-slate-500">Contenedores activos</p>
+        <p id="total" class="text-3xl font-extrabold text-slate-900">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-100 text-center">
+        <p class="text-sm text-slate-500">Disponibles</p>
+        <p id="available" class="text-3xl font-extrabold text-emerald-600">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-100 text-center">
+        <p class="text-sm text-slate-500">Llenos</p>
+        <p id="full" class="text-3xl font-extrabold text-rose-600">0</p>
+      </div>
+
+    </section>
+
+    <!-- Mapa -->
+    <section class="bg-white rounded-2xl shadow-md border border-slate-100 p-5">
+
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+        <h2 class="text-lg font-bold text-slate-900">
+          Contenedores georreferenciados
+        </h2>
+
+        <button
+          id="refreshButton"
+          class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-semibold transition"
+        >
+          Actualizar mapa
+        </button>
+      </div>
+
+      <div class="flex flex-wrap gap-4 text-sm text-slate-600 mb-4">
+        <span>🟢 Disponible</span>
+        <span>🔴 Lleno</span>
+        <span>Los contenedores inactivos están ocultos</span>
+      </div>
+
+      <div id="map"></div>
+    </section>
+
+    <!-- Formulario de reporte -->
+    <section class="bg-white rounded-2xl shadow-md border border-slate-100 p-6 space-y-4">
+
+      <h2 class="text-lg font-bold text-slate-900 border-b pb-3">
+        Reportar Contenedor Lleno
+      </h2>
+
+      <p class="text-sm text-slate-500">
+        Selecciona un contenedor disponible en el mapa y registra tu reporte.
+      </p>
+
+      <form id="reportForm" class="space-y-4">
+
+        <div>
+          <label for="containerId" class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
+            Contenedor seleccionado
+          </label>
+          <input
+            id="containerId"
+            type="text"
+            readonly
+            placeholder="Selecciona un marcador verde"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm"
+          >
+        </div>
+
+        <div>
+          <label for="citizenId" class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
+            ID de ciudadano
+          </label>
+          <input
+            id="citizenId"
+            type="number"
+            min="1"
+            step="1"
+            required
+            placeholder="Ejemplo: 100"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+        </div>
+
+        <button
+          id="reportButton"
+          type="submit"
+          class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-3 rounded-xl font-bold text-sm shadow-sm transition"
+        >
+          Enviar reporte ciudadano
+        </button>
+      </form>
+
+      <div
+        id="statusMsg"
+        role="status"
+        aria-live="polite"
+        class="hidden rounded-xl p-3 text-sm font-medium"
+      ></div>
+    </section>
+
+    <footer class="text-center text-xs text-slate-400 pb-4">
+      Municipalidad Distrital del Rímac · Proyecto EcoSystem
+    </footer>
+  </main>
+
+  <script>
+    const API = "http://127.0.0.1:8000/api/v1/containers";
+
+    const map = L.map("map").setView([-12.033, -77.029], 14);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }
+    ).addTo(map);
+
+    const markerLayer = L.layerGroup().addTo(map);
+
+    let selectedContainer = null;
+
+    const statusMsg = document.getElementById("statusMsg");
+    const containerInput = document.getElementById("containerId");
+    const reportButton = document.getElementById("reportButton");
+
+    function showMessage(message, error = false) {
+      statusMsg.textContent = message;
+      statusMsg.className = error
+        ? "rounded-xl p-3 text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200"
+        : "rounded-xl p-3 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+    }
+
+    function selectContainer(container) {
+      selectedContainer = container;
+      containerInput.value = `${container.id} - ${container.name}`;
+      showMessage(`Seleccionaste: ${container.name}`);
+    }
+
+    async function loadContainers() {
+      try {
+        const response = await fetch(`${API}/`);
+
+        if (!response.ok) {
+          throw new Error(`Error HTTP ${response.status}`);
+        }
+
+        const containers = await response.json();
+
+        const active = containers.filter(
+          container => container.status !== "INACTIVO"
+        );
+
+        markerLayer.clearLayers();
+        selectedContainer = null;
+        containerInput.value = "";
+
+        document.getElementById("total").textContent = active.length;
+        document.getElementById("available").textContent =
+          active.filter(c => c.status === "DISPONIBLE").length;
+        document.getElementById("full").textContent =
+          active.filter(c => c.status === "LLENO").length;
+
+        const bounds = [];
+
+        for (const container of active) {
+          const isFull = container.status === "LLENO";
+          const color = isFull ? "#e11d48" : "#059669";
+
+          const marker = L.circleMarker(
+            [container.latitude, container.longitude],
+            {
+              radius: 10,
+              color: "#ffffff",
+              weight: 2,
+              fillColor: color,
+              fillOpacity: 0.95
+            }
+          );
+
+          const popup = document.createElement("div");
+
+          const name = document.createElement("strong");
+          name.textContent = container.name;
+
+          const address = document.createElement("p");
+          address.textContent = container.address;
+
+          const state = document.createElement("p");
+          state.textContent = `Estado: ${container.status}`;
+
+          const reports = document.createElement("p");
+          reports.textContent =
+            `Reportes registrados: ${container.current_reports_count}`;
+
+          popup.append(name, address, state, reports);
+
+          if (container.status === "DISPONIBLE") {
+            const chooseButton = document.createElement("button");
+            chooseButton.textContent = "Seleccionar contenedor";
+            chooseButton.style.cssText =
+              "background:#059669;color:white;padding:7px 10px;" +
+              "border-radius:8px;cursor:pointer;margin-top:5px";
+
+            chooseButton.addEventListener("click", () => {
+              selectContainer(container);
+            });
+
+            popup.append(chooseButton);
+          }
+
+          marker.bindPopup(popup);
+          marker.addTo(markerLayer);
+
+          bounds.push([container.latitude, container.longitude]);
+        }
+
+        if (bounds.length) {
+          map.fitBounds(bounds, {
+            padding: [35, 35],
+            maxZoom: 15
+          });
+        }
+
+        showMessage(
+          `Mapa actualizado: ${active.length} contenedores activos.`
+        );
+
+      } catch (error) {
+        console.error(error);
+        showMessage(
+          `No se pudieron cargar los contenedores: ${error.message}`,
+          true
+        );
+      }
+    }
+
+    async function reportFull(event) {
+      event.preventDefault();
+
+      if (!selectedContainer) {
+        showMessage(
+          "Selecciona primero un contenedor disponible.",
+          true
+        );
+        return;
+      }
+
+      const citizenId = Number(
+        document.getElementById("citizenId").value
+      );
+
+      if (!Number.isSafeInteger(citizenId) || citizenId <= 0) {
+        showMessage(
+          "Introduce un ID de ciudadano válido.",
+          true
+        );
+        return;
+      }
+
+      reportButton.disabled = true;
+
+      try {
+        const response = await fetch(
+          `${API}/${selectedContainer.id}/report-full`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ citizen_id: citizenId })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          const detail =
+            typeof data.detail === "string"
+              ? data.detail
+              : `Error HTTP ${response.status}`;
+          throw new Error(detail);
+        }
+
+        await loadContainers();
+
+        showMessage(
+          `Reporte registrado: ${data.container_code} - ` +
+          `${data.reports_registered}/${data.threshold_required}. ` +
+          `Estado: ${data.current_status}`
+        );
+
+      } catch (error) {
+        showMessage(error.message, true);
+      } finally {
+        reportButton.disabled = false;
+      }
+    }
+
+    document.getElementById("reportForm")
+      .addEventListener("submit", reportFull);
+
+    document.getElementById("refreshButton")
+      .addEventListener("click", loadContainers);
+
+    loadContainers();
+  </script>
+</body>
+</html>
