@@ -5,6 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from geoalchemy2 import Geography
+from geoalchemy2 import Geometry
 from app.core.database import Base
 
 
@@ -81,3 +82,32 @@ class ContainerCitizenReport(Base):
             name="uq_container_citizen_vote"
         ),
     )
+
+class DistrictBoundary(Base):
+    __tablename__ = "district_boundaries"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    ubigeo: Mapped[str] = mapped_column(
+        String(6),
+        unique=True,
+        nullable=False
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+
+    geom = mapped_column(
+        Geometry(
+            geometry_type="MULTIPOLYGON",
+            srid=4326,
+            spatial_index=True
+        ),
+        nullable=False
+    )
+

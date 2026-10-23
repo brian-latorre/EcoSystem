@@ -38,3 +38,26 @@ class ContainerResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ContainerUpdate(BaseModel):
+    name: str = Field(
+        ..., min_length=1, max_length=120
+    )
+
+    address: str = Field(
+        ..., min_length=1, max_length=200
+    )
+
+    latitude: float = Field(
+        ..., ge=-90.0, le=90.0
+    )
+
+    longitude: float = Field(
+        ..., ge=-180.0, le=180.0
+    )
+
+    capacity_kg: float = Field(
+        ..., gt=0
+    )
+
