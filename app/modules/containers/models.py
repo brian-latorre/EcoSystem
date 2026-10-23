@@ -111,3 +111,35 @@ class DistrictBoundary(Base):
         nullable=False
     )
 
+class ContainerFullEvent(Base):
+    __tablename__ = "container_full_events"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    container_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("containers.id"),
+        nullable=False,
+        index=True
+    )
+
+    event_type: Mapped[str] = mapped_column(
+        String(50),
+        default="container.full",
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True
+    )
