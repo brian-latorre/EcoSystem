@@ -43,7 +43,8 @@ Datos</h3>
     </div>
   </div>
   <script>
-    const API = "http://127.0.0.1:8000/api/v1/governance";
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const API = `${BASE_URL}/api/v1/governance`;
     async function loadPolicies() {
       const res = await fetch(`${API}/policies`);
       const data = await res.json();

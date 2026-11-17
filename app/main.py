@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from app.core.config import get_settings
 from app.core.database import Base, engine, init_postgis_extension
 
@@ -33,3 +35,11 @@ for mod in MODULES:
         app.include_router(module.router, prefix=settings.API_V1_STR)
     except (ImportError, AttributeError):
         pass
+
+
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url="/app/index.html")
+
+
+app.mount("/app", StaticFiles(directory="frontend", html=True), name="frontend")

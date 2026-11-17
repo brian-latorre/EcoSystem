@@ -158,15 +158,16 @@
   </main>
 
   <script>
-    const API = "http://127.0.0.1:8000/api/v1/containers";
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const API = `${BASE_URL}/api/v1/containers`;
 
     const map = L.map("map").setView([-12.033, -77.029], 14);
 
     L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
       {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+        attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom"
       }
     ).addTo(map);
 

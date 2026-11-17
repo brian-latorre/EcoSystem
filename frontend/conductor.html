@@ -35,9 +35,11 @@
     }).addTo(map);
     let routeLayer = L.layerGroup().addTo(map);
 
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+
     async function loadRoute(mode = 'haversine') {
       routeLayer.clearLayers();
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/routes/optimal-daily?mode=${mode}`);
+      const res = await fetch(`${BASE_URL}/api/v1/routes/optimal-daily?mode=${mode}`);
       const data = await res.json();
       document.getElementById('summary').innerText =
         `Algoritmo: ${data.algorithm} | Paradas: ${data.total_stops} | Distancia: ${data.total_distance_km} km | Tiempo Est.: ${data.estimated_total_minutes} min`;
