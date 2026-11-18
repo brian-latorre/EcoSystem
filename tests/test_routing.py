@@ -4,8 +4,11 @@ from app.modules.routing.strategies import (
     NearestNeighborTSPStrategy,
     RoadNetworkAdapterTSPStrategy,
     RoutePlannerContext,
+    TwoOptTSPStrategy,
 )
 from app.modules.routing.adapters import OpenRouteServiceAdapter, IExternalDistancePort
+from app.modules.routing.schemas import RoutingModeEnum
+from app.modules.routing.service import RoutingService
 
 
 def test_geonode_value_object_immutability_and_validation():
@@ -68,3 +71,31 @@ def test_adapter_external_distance_port_contract():
     assert isinstance(adapter, IExternalDistancePort)
     dist = adapter.get_driving_distance_km((-12.0298, -77.0285), (-12.0365, -77.0241))
     assert dist > 0.0
+
+
+def test_two_opt_tsp_strategy_improves_or_matches_distance():
+    depot = GeoNode(0, "DEPOT-RIMAC", -12.0298, -77.0285, "Cochera Municipal")
+    nodes = [
+        GeoNode(1, "CONT-01", -12.0365, -77.0241, "Alameda"),
+        GeoNode(2, "CONT-02", -12.0392, -77.0289, "Jr. Trujillo"),
+        GeoNode(3, "CONT-03", -12.0271, -77.0315, "Av. Alcázar"),
+        GeoNode(4, "CONT-04", -12.0322, -77.0381, "Av. Caquetá"),
+    ]
+    nn_plan = NearestNeighborTSPStrategy().calculate_route(depot, nodes)
+    opt_plan = TwoOptTSPStrategy().calculate_route(depot, nodes)
+
+    assert opt_plan.algorithm == "TwoOptTSPStrategy"
+    assert opt_plan.total_stops == 4
+    assert opt_plan.total_distance_km <= nn_plan.total_distance_km
+    assert [s.sequence_order for s in opt_plan.ordered_stops] == [1, 2, 3, 4]
+
+
+def test_routing_service_returns_empty_stops_when_seeded_containers_are_available():
+    class EmptySeededRepo:
+        def get_full_stops_or_fallback(self, fallback_nodes):
+            return []
+
+    plan = RoutingService(EmptySeededRepo()).compute_daily_route(RoutingModeEnum.TWO_OPT)
+    assert plan["algorithm"] == "TwoOptTSPStrategy"
+    assert plan["total_stops"] == 0
+    assert plan["ordered_stops"] == []

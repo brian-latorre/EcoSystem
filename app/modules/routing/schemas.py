@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class RoutingModeEnum(str, Enum):
     HAVERSINE = "haversine"
     ROAD = "road"
+    TWO_OPT = "two_opt"
 
 
 class RouteStopResponse(BaseModel):

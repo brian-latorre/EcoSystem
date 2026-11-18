@@ -26,6 +26,15 @@ class ContainerCounterResetObserver(ICollectionObserver):
                 with db.begin_nested():
                     db.execute(
                         text(
+                            "DELETE FROM container_citizen_reports "
+                            "WHERE container_id IN ("
+                            "SELECT id FROM containers WHERE code = :c"
+                            ")"
+                        ),
+                        {"c": code},
+                    )
+                    db.execute(
+                        text(
                             "UPDATE containers "
                             "SET status = 'DISPONIBLE', "
                             "current_reports_count = 0 "
