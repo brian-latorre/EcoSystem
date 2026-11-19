@@ -7,9 +7,31 @@ services:
       POSTGRES_PASSWORD: ecosystem_pass_2026
       POSTGRES_DB: ecosystem_rimac_db
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecosystem_user -d ecosystem_rimac_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: ecosystem_api
+    environment:
+      PROJECT_NAME: EcoSystem API
+      API_V1_STR: /api/v1
+      DATABASE_URL: postgresql+psycopg2://ecosystem_user:ecosystem_pass_2026@db:5432/ecosystem_rimac_db
+      DEFAULT_CONTAINER_REPORT_THRESHOLD: 3
+      MUNICIPAL_DEPOT_LAT: -12.0298
+      MUNICIPAL_DEPOT_LON: -77.0285
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
