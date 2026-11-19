@@ -1,8 +1,5 @@
 from datetime import datetime
-from sqlalchemy import (
-    Integer, String, Float, DateTime,
-    ForeignKey, UniqueConstraint
-)
+from sqlalchemy import (Integer, String, Float, DateTime,ForeignKey, UniqueConstraint)
 from sqlalchemy.orm import Mapped, mapped_column
 from geoalchemy2 import Geography
 from geoalchemy2 import Geometry
