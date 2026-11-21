@@ -17,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODULES = ["auth", "containers", "routing", "drop_and_go", "governance", "waste_reports"]
+MODULES = ["auth", "containers", "routing", "drop_and_go", "governance", "waste_reports", "plant"]
 
 @app.on_event("startup")
 def on_startup():

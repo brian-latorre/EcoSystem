@@ -59,6 +59,8 @@ def test_all_module_routes_and_static_portal_are_mounted():
         "/api/v1/governance/staff",
         "/api/v1/waste-reports/pending",
         "/api/v1/waste-reports/{report_id}/resolve",
+        "/api/v1/plant/packages/pending",
+        "/api/v1/plant/packages/{package_code}/process",
     ):
         assert prefix in paths
 
@@ -66,6 +68,7 @@ def test_all_module_routes_and_static_portal_are_mounted():
         "/app/index.html",
         "/app/ciudadano.html",
         "/app/conductor.html",
+        "/app/operario.html",
         "/app/admin.html",
         "/app/denuncias.html",
     ):
