@@ -28,3 +28,5 @@ class LoginOutput(BaseModel):
     full_name: str
     role: UserRole
     eco_points: int
+    access_token: str = ""
+    token_type: str = "bearer"
