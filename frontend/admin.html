@@ -236,12 +236,24 @@
       }
     }
 
+    function getAuthHeaders(withJson = false) {
+      const headers = withJson ? { "Content-Type": "application/json" } : {};
+      const raw = localStorage.getItem("ecosystem_user");
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          if (user.access_token) headers.Authorization = `Bearer ${user.access_token}`;
+        } catch (e) {}
+      }
+      return headers;
+    }
+
     async function updateThreshold() {
       const val = parseFloat(document.getElementById("threshVal").value || "3");
       try {
         const res = await fetch(`${GOV_API}/policies/parameters/DEFAULT_CONTAINER_REPORT_THRESHOLD`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(true),
           body: JSON.stringify({ param_value: val, description: "Umbral mínimo de reportes ciudadanos" })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

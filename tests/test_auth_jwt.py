@@ -90,5 +90,15 @@ def test_login_returns_valid_jwt_and_enforces_role():
             },
         )
         assert wrong_role.status_code == 403
+
+        me_ok = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {body['access_token']}"},
+        )
+        assert me_ok.status_code == 200
+        assert me_ok.json()["role"] == "CONDUCTOR"
+
+        assert client.get("/api/v1/auth/me").status_code == 401
+        assert client.get("/api/v1/auth/me", headers={"Authorization": "Bearer invalid"}).status_code == 401
     finally:
         app.dependency_overrides.clear()

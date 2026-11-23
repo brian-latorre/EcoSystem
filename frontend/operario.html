@@ -158,6 +158,18 @@
     const PLANT_API = `${BASE_URL}/api/v1/plant`;
     document.getElementById("docsLink").href = `${BASE_URL}/docs`;
 
+    function getAuthHeaders(withJson = false) {
+      const headers = withJson ? { "Content-Type": "application/json" } : {};
+      const raw = localStorage.getItem("ecosystem_user");
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          if (user.access_token) headers.Authorization = `Bearer ${user.access_token}`;
+        } catch (e) {}
+      }
+      return headers;
+    }
+
     function getCurrentOperatorId() {
       const raw = localStorage.getItem("ecosystem_user");
       if (!raw) return 1;
@@ -326,7 +338,7 @@
       try {
         const res = await fetch(`${PLANT_API}/packages/${encodeURIComponent(code)}/process`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(true),
           body: JSON.stringify(payload)
         });
         const data = await res.json();
