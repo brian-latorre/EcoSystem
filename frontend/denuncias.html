@@ -1,124 +1,634 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EcoSystem - Reporte de Basura Abandonada</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center justify-center p-4">
-    
-    <!-- Contenedor Principal Estilo Tarjeta Prototipo -->
-    <div class="max-w-lg w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
-        
-        <!-- Cabecera de Marca -->
-        <div class="text-center mb-6">
-            <span class="text-xs font-bold tracking-wider text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full">Fiscalización Ambiental</span>
-            <h1 class="text-2xl font-extrabold text-slate-900 mt-2">EcoSystem</h1>
-            <p class="text-xs text-slate-500 mt-1">Recicla hoy, mejora mañana</p>
-        </div>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoSystem - Denuncias Ambientales</title>
 
-        <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
-            <span></span> Registrar Denuncia de Basura Abandonada
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    #map { height: 550px; width: 100%; z-index: 0; }
+    .leaflet-popup-content { max-width: 250px; }
+    .leaflet-popup-content img {
+      max-width: 100%;
+      max-height: 160px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-5 py-5">
+      <span class="text-xs font-bold tracking-wider
+        text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
+        FISCALIZACIÓN AMBIENTAL
+      </span>
+      <h1 class="text-3xl font-extrabold mt-3">EcoSystem</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Reporte ciudadano de basura abandonada — Rímac
+      </p>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-4 md:p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+      <!-- Formulario de denuncias -->
+      <section class="lg:col-span-2 bg-white rounded-2xl
+        shadow-sm border border-slate-200 p-5 md:p-6">
+
+        <h2 class="text-xl font-bold mb-2">
+          Registrar denuncia ambiental
         </h2>
+        <p class="text-sm text-slate-500 mb-5">
+          Selecciona el lugar, describe el problema y adjunta
+          una fotografía de evidencia.
+        </p>
 
         <form id="wasteForm" class="space-y-4">
+
+          <div>
+            <label for="citizenId"
+              class="block text-xs font-bold mb-1">
+              ID del ciudadano (demostración)
+            </label>
+            <input id="citizenId" type="number" min="1"
+              value="1" required
+              class="w-full border border-slate-200 rounded-xl p-3">
+          </div>
+
+          <div>
+            <label for="desc"
+              class="block text-xs font-bold mb-1">
+              Descripción del residuo
+            </label>
+            <textarea id="desc" rows="3" maxlength="250"
+              required
+              placeholder="Ej. Bolsas de basura acumuladas"
+              class="w-full border border-slate-200 rounded-xl p-3"></textarea>
+          </div>
+
+          <div>
+            <label for="ref"
+              class="block text-xs font-bold mb-1">
+              Referencia de dirección
+            </label>
+            <input id="ref" type="text" maxlength="200"
+              required placeholder="Jirón, avenida o referencia"
+              class="w-full border border-slate-200 rounded-xl p-3">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
             <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Descripción del residuo:</label>
-                <textarea id="desc" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" rows="3" placeholder="Ej. Acumulación de desmonte y bolsas rotas" required></textarea>
+              <label for="lat"
+                class="block text-xs font-bold mb-1">
+                Latitud
+              </label>
+              <input id="lat" type="number" step="any"
+                min="-90" max="90" required
+                class="w-full border rounded-xl p-3 text-sm">
             </div>
-
             <div>
-                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Referencia de dirección:</label>
-                <input id="ref" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" placeholder="Ej. Cruce Jr. Tarapacá con Av. Alcázar" required>
+              <label for="lon"
+                class="block text-xs font-bold mb-1">
+                Longitud
+              </label>
+              <input id="lon" type="number" step="any"
+                min="-180" max="180" required
+                class="w-full border rounded-xl p-3 text-sm">
             </div>
+          </div>
 
-            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-500 uppercase">Latitud:</label>
-                    <input id="lat" type="text" value="-12.0251" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-mono text-slate-700">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-500 uppercase">Longitud:</label>
-                    <input id="lon" type="text" value="-77.0312" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-mono text-slate-700">
-                </div>
-            </div>
+          <button type="button" id="btnGps"
+            class="w-full bg-emerald-600 hover:bg-emerald-700
+            text-white rounded-xl py-3 font-semibold text-sm">
+            Seguir mi ubicación GPS en vivo
+          </button>
 
-            <button type="button" id="btnGps" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-semibold text-xs uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-2">
-                <span></span> Capturar Coordenadas GPS Actuales
-            </button>
+          <p id="locationMsg" class="text-xs text-slate-500"
+            aria-live="polite">
+            Haz clic en el mapa para seleccionar la ubicación.
+          </p>
 
-            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
-                Enviar Reporte Ciudadano
-            </button>
+          <div class="border-t pt-4">
+            <label for="photo"
+              class="block text-xs font-bold mb-2">
+              Fotografía de evidencia
+            </label>
+            <input id="photo" type="file" accept="image/*"
+              capture="environment"
+              class="block w-full text-sm">
+            <p class="text-xs text-slate-500 mt-2">
+              La fotografía se reducirá a 600 píxeles
+              y se convertirá a JPEG.
+            </p>
+            <img id="photoPreview" alt="Vista previa"
+              class="hidden mt-3 w-full max-h-48
+              object-contain rounded-xl border">
+          </div>
+
+          <button id="submitBtn" type="submit"
+            class="w-full bg-slate-900 hover:bg-slate-800
+            text-white rounded-xl py-3 font-bold">
+            Enviar reporte ciudadano
+          </button>
         </form>
 
-        <div id="statusMsg" class="mt-4 text-center text-sm font-medium hidden p-3 rounded-xl"></div>
+        <div id="statusMsg" role="status"
+          aria-live="polite" class="hidden mt-4 rounded-xl p-3 text-sm">
+        </div>
+      </section>
+
+      <!-- Mapa de denuncias -->
+      <section class="lg:col-span-3 bg-white rounded-2xl
+        shadow-sm border border-slate-200 overflow-hidden">
+
+        <div class="p-5 border-b border-slate-100">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-bold">
+                Mapa de puntos críticos
+              </h2>
+              <p class="text-sm text-slate-500">
+                Marcador azul: ubicación seleccionada.
+                Marcadores rojos: denuncias pendientes.
+              </p>
+            </div>
+
+            <button id="refreshBtn" type="button"
+              class="bg-emerald-50 text-emerald-700
+              rounded-lg px-3 py-2 text-xs font-bold">
+              Actualizar
+            </button>
+          </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="p-4 bg-slate-50 text-sm text-slate-600">
+          <span id="reportCount">Cargando denuncias...</span>
+        </div>
+      </section>
     </div>
+  </main>
 
-    <!-- Pie de página institucional -->
-    <p class="text-xs text-slate-400 mt-6">Municipalidad Distrital del Rímac • Proyecto EcoSystem</p>
+  <footer class="text-center text-xs text-slate-400 p-6">
+    Municipalidad Distrital del Rímac · Proyecto EcoSystem
+  </footer>
 
-    <script>
-    const btnGps = document.getElementById('btnGps');
-    const latInput = document.getElementById('lat');
-    const lonInput = document.getElementById('lon');
-    const form = document.getElementById('wasteForm');
-    const statusMsg = document.getElementById('statusMsg');
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    btnGps.addEventListener('click', () => {
-        if ("geolocation" in navigator) {
-            btnGps.innerText = "Obteniendo ubicación...";
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    latInput.value = pos.coords.latitude.toFixed(6);
-                    lonInput.value = pos.coords.longitude.toFixed(6);
-                    btnGps.innerText = "Coordenadas Capturadas ✓";
-                    btnGps.classList.replace('bg-emerald-600', 'bg-teal-700');
-                },
-                (err) => {
-                    alert("No se pudo obtener la ubicación GPS: " + err.message);
-                    btnGps.innerText = "Capturar Coordenadas GPS";
-                },
-                { enableHighAccuracy: true }
+  <script>
+    "use strict";
+
+    const API = "/api/v1/waste-reports";
+
+    const latInput = document.getElementById("lat");
+    const lonInput = document.getElementById("lon");
+    const refInput = document.getElementById("ref");
+    const form = document.getElementById("wasteForm");
+    const btnGps = document.getElementById("btnGps");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusMsg = document.getElementById("statusMsg");
+    const locationMsg = document.getElementById("locationMsg");
+    const photoInput = document.getElementById("photo");
+    const photoPreview = document.getElementById("photoPreview");
+
+    const map = L.map("map").setView(
+      [-12.0251, -77.0312], 14
+    );
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }
+    ).addTo(map);
+
+    let selectedMarker = null;
+    let gpsWatchId = null;
+    let photoDataUrl = null;
+    let gpsMarker = null;
+    let pendingLayer = L.layerGroup().addTo(map);
+
+    function showMessage(message, isError = false) {
+      statusMsg.textContent = message;
+      statusMsg.className =
+        "mt-4 rounded-xl p-3 text-sm " +
+        (isError
+          ? "bg-rose-50 text-rose-700 border border-rose-200"
+          : "bg-emerald-50 text-emerald-700 border border-emerald-200");
+    }
+
+    function setLocation(lat, lon, moveMap = false) {
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        return;
+      }
+
+      latInput.value = lat.toFixed(6);
+      lonInput.value = lon.toFixed(6);
+
+      if (!selectedMarker) {
+        selectedMarker = L.marker([lat, lon], {
+          draggable: true
+        }).addTo(map);
+
+        selectedMarker.bindPopup("Ubicación de la denuncia");
+
+        selectedMarker.on("dragend", () => {
+          stopGps();
+          const point = selectedMarker.getLatLng();
+          setLocation(point.lat, point.lng);
+          locationMsg.textContent =
+            "Ubicación elegida arrastrando el marcador.";
+        });
+      } else {
+        selectedMarker.setLatLng([lat, lon]);
+      }
+
+      if (moveMap) {
+        map.setView([lat, lon], 16);
+      }
+    }
+
+    map.on("click", (event) => {
+      stopGps();
+      setLocation(event.latlng.lat, event.latlng.lng);
+      locationMsg.textContent =
+        "Ubicación elegida manualmente en el mapa.";
+    });
+
+    function stopGps() {
+      if (gpsWatchId !== null) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+      }
+
+      btnGps.textContent = "Seguir mi ubicación GPS en vivo";
+    }
+
+    btnGps.addEventListener("click", () => {
+      if (gpsWatchId !== null) {
+        stopGps();
+        locationMsg.textContent = "Seguimiento GPS detenido.";
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        showMessage("El navegador no admite geolocalización.", true);
+        return;
+      }
+
+      if (!window.isSecureContext) {
+        showMessage(
+          "El GPS necesita HTTPS o localhost.",
+          true
+        );
+        return;
+      }
+
+      btnGps.textContent = "Detener seguimiento GPS";
+
+      gpsWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          setLocation(lat, lon, true);
+
+          if (!gpsMarker) {
+            gpsMarker = L.circleMarker([lat, lon], {
+              radius: 7,
+              color: "#047857",
+              fillColor: "#10b981",
+              fillOpacity: 0.9
+            }).addTo(map);
+            gpsMarker.bindPopup("Mi posición GPS");
+          } else {
+            gpsMarker.setLatLng([lat, lon]);
+          }
+
+          locationMsg.textContent =
+            "GPS activo. Precisión aproximada: " +
+            Math.round(position.coords.accuracy) + " metros.";
+        },
+        (error) => {
+          stopGps();
+          showMessage("Error GPS: " + error.message, true);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 15000
+        }
+      );
+    });
+
+    function updateFromInputs() {
+      const lat = Number(latInput.value);
+      const lon = Number(lonInput.value);
+
+      if (
+        Number.isFinite(lat) &&
+        Number.isFinite(lon) &&
+        lat >= -90 && lat <= 90 &&
+        lon >= -180 && lon <= 180
+      ) {
+        stopGps();
+        setLocation(lat, lon, true);
+      }
+    }
+
+    latInput.addEventListener("change", updateFromInputs);
+    lonInput.addEventListener("change", updateFromInputs);
+
+    // Redimensionar imagen y convertir a JPEG/Base64.
+    function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        if (!file.type.startsWith("image/")) {
+          reject(new Error("Selecciona un archivo de imagen."));
+          return;
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+          reject(new Error("La imagen debe pesar como máximo 8 MB."));
+          return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onerror = () =>
+          reject(new Error("No se pudo leer la fotografía."));
+
+        reader.onload = () => {
+          const img = new Image();
+
+          img.onerror = () =>
+            reject(new Error("Formato de imagen no compatible."));
+
+          img.onload = () => {
+            const maxSize = 600;
+            const scale = Math.min(
+              1,
+              maxSize / Math.max(img.width, img.height)
             );
-        } else {
-            alert("Tu navegador no soporta geolocalización.");
-        }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(
+              1, Math.round(img.width * scale)
+            );
+            canvas.height = Math.max(
+              1, Math.round(img.height * scale)
+            );
+
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+              reject(new Error("No se pudo procesar la imagen."));
+              return;
+            }
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(
+              img, 0, 0, canvas.width, canvas.height
+            );
+
+            resolve(canvas.toDataURL("image/jpeg", 0.72));
+          };
+
+          img.src = reader.result;
+        };
+
+        reader.readAsDataURL(file);
+      });
+    }
+
+    photoInput.addEventListener("change", async () => {
+      photoDataUrl = null;
+      photoPreview.classList.add("hidden");
+      photoPreview.removeAttribute("src");
+
+      const file = photoInput.files[0];
+      if (!file) return;
+
+      try {
+        photoDataUrl = await compressImage(file);
+        photoPreview.src = photoDataUrl;
+        photoPreview.classList.remove("hidden");
+      } catch (error) {
+        photoInput.value = "";
+        showMessage(error.message, true);
+      }
     });
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = {
-            citizen_id: 1,
-            description: document.getElementById('desc').value,
-            photo_evidence_url: "/static/uploads/denuncia_demo.jpg",
-            address_reference: document.getElementById('ref').value,
-            latitude: parseFloat(latInput.value),
-            longitude: parseFloat(lonInput.value)
-        };
-        try {
-            const res = await fetch(" http://127.0.0.1:8000/api/v1/waste-reports/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-                statusMsg.innerText = "¡Reporte registrado correctamente en PostGIS!";
-                statusMsg.className = "mt-4 text-center text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 p-3 rounded-xl";
-                statusMsg.classList.remove("hidden");
-                form.reset();
-                btnGps.innerText = "Capturar Coordenadas GPS Actuales";
-                btnGps.classList.replace('bg-teal-700', 'bg-emerald-600');
-            } else {
-                throw new Error("Error en servidor");
-            }
-        } catch (err) {
-            statusMsg.innerText = "Error al enviar la denuncia. Asegúrate de que el backend esté encendido.";
-            statusMsg.className = "mt-4 text-center text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200 p-3 rounded-xl";
-            statusMsg.classList.remove("hidden");
+    // Imagen identificada como placeholder, si no se adjunta foto.
+    function defaultImageDataUrl() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 600;
+      canvas.height = 320;
+
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fillRect(0, 0, 600, 320);
+      ctx.fillStyle = "#334155";
+      ctx.textAlign = "center";
+      ctx.font = "bold 30px sans-serif";
+      ctx.fillText("SIN FOTO DE EVIDENCIA", 300, 165);
+
+      return canvas.toDataURL("image/jpeg", 0.7);
+    }
+
+    function createPopup(report) {
+      // Construcción con textContent para evitar insertar HTML
+      // proporcionado por usuarios directamente en el DOM.
+      const wrapper = document.createElement("div");
+
+      const title = document.createElement("strong");
+      title.textContent = "Denuncia #" + report.id;
+      wrapper.appendChild(title);
+
+      for (const [label, value] of [
+        ["Descripción", report.description],
+        ["Dirección", report.address_reference],
+        ["Estado", report.status],
+        [
+          "Coordenadas",
+          report.latitude + ", " + report.longitude
+        ]
+      ]) {
+        const line = document.createElement("p");
+        line.style.margin = "5px 0";
+        line.textContent = label + ": " + value;
+        wrapper.appendChild(line);
+      }
+
+      const photo = report.photo_evidence_url || "";
+
+      if (
+        photo.startsWith("data:image/jpeg;base64,") ||
+        photo.startsWith("data:image/png;base64,") ||
+        photo.startsWith("/static/") ||
+        photo.startsWith("https://")
+      ) {
+        const image = document.createElement("img");
+        image.src = photo;
+        image.alt = "Evidencia de la denuncia";
+        image.loading = "lazy";
+        wrapper.appendChild(image);
+      }
+
+      return wrapper;
+    }
+
+    async function loadReports() {
+      const count = document.getElementById("reportCount");
+
+      try {
+        const response = await fetch(API + "/pending");
+
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status);
         }
+
+        const reports = await response.json();
+
+        if (!Array.isArray(reports)) {
+          throw new Error("Formato de respuesta inesperado.");
+        }
+
+        pendingLayer.clearLayers();
+
+        for (const report of reports) {
+          const lat = Number(report.latitude);
+          const lon = Number(report.longitude);
+
+          if (!Number.isFinite(lat) ||
+              !Number.isFinite(lon)) {
+            continue;
+          }
+
+          L.circleMarker([lat, lon], {
+            radius: 9,
+            color: "#9f1239",
+            fillColor: "#f43f5e",
+            fillOpacity: 0.85,
+            weight: 2
+          })
+          .bindPopup(createPopup(report))
+          .addTo(pendingLayer);
+        }
+
+        count.textContent =
+          reports.length + " denuncias pendientes.";
+      } catch (error) {
+        count.textContent =
+          "No se pudieron cargar las denuncias: " +
+          error.message;
+      }
+    }
+
+    document.getElementById("refreshBtn")
+      .addEventListener("click", loadReports);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const lat = Number(latInput.value);
+      const lon = Number(lonInput.value);
+      const citizenId = Number(
+        document.getElementById("citizenId").value
+      );
+
+      if (
+        latInput.value === "" ||
+        lonInput.value === "" ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon)
+      ) {
+        showMessage("Selecciona una ubicación válida.", true);
+        return;
+      }
+
+      if (!Number.isInteger(citizenId) || citizenId <= 0) {
+        showMessage("Ingresa un ID de ciudadano válido.", true);
+        return;
+      }
+
+      const payload = {
+        citizen_id: citizenId,
+        description:
+          document.getElementById("desc").value.trim(),
+        address_reference: refInput.value.trim(),
+        photo_evidence_url:
+          photoDataUrl || defaultImageDataUrl(),
+        latitude: lat,
+        longitude: lon
+      };
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Enviando denuncia...";
+
+      try {
+        const response = await fetch(API + "/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const detail = result.detail;
+          throw new Error(
+            typeof detail === "string"
+              ? detail
+              : "El servidor devolvió HTTP " +
+                response.status
+          );
+        }
+
+        showMessage(
+          "Denuncia #" + result.id +
+          " registrada correctamente."
+        );
+
+        document.getElementById("desc").value = "";
+        refInput.value = "";
+        photoInput.value = "";
+        photoDataUrl = null;
+        photoPreview.removeAttribute("src");
+        photoPreview.classList.add("hidden");
+
+        await loadReports();
+      } catch (error) {
+        showMessage(
+          "No se pudo registrar la denuncia: " +
+          error.message,
+          true
+        );
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Enviar reporte ciudadano";
+      }
     });
-    </script>
+
+    // Posición inicial para demostraciones sin GPS.
+    setLocation(-12.0251, -77.0312);
+
+    // Consultar las denuncias existentes al abrir la página.
+    loadReports();
+  </script>
 </body>
 </html>
