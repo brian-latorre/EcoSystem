@@ -5,6 +5,8 @@ from app.core.database import get_db
 from app.modules.containers.schemas import (ContainerCreate, ContainerResponse, ContainerUpdate)
 from app.modules.containers.repository import ContainerRepository
 from pydantic import BaseModel, Field
+from app.modules.containers.adapters import GeoJsonContainerAdapter
+from app.modules.containers.flyweight import ContainerFlyweightFactory
 from app.modules.containers.service import ContainerThresholdService
 
 router = APIRouter(
@@ -114,7 +116,16 @@ def delete_container(
             detail="Contenedor no encontrado o ya inactivo"
         )
 
-# GET: Contenedores cercanos en GeoJSON
+@router.get("/flyweight-specs")
+def get_container_flyweight_specs():
+    specs = ContainerFlyweightFactory.list_known_specs()
+    return {
+        "pattern": "Flyweight",
+        "pool_size": ContainerFlyweightFactory.pool_size(),
+        "specs": specs,
+    }
+
+
 @router.get("/nearby/geojson")
 def get_nearby_containers_geojson(
     lat: float = Query(-12.033, ge=-90.0, le=90.0),
@@ -134,34 +145,7 @@ def get_nearby_containers_geojson(
         radius_m=radius_m
     )
 
-    features = []
-
-    for container in containers:
-        features.append({
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [
-                    container.longitude,
-                    container.latitude
-                ]
-            },
-            "properties": {
-                "id": container.id,
-                "code": container.code,
-                "name": container.name,
-                "address": container.address,
-                "status": container.status,
-                "capacity_kg": container.capacity_kg,
-                "current_reports_count":
-                    container.current_reports_count
-            }
-        })
-
-    return {
-        "type": "FeatureCollection",
-        "features": features
-    }
+    return GeoJsonContainerAdapter.to_feature_collection(containers)
 
 # POST: Reportar un contenedor lleno
 @router.post(

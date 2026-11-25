@@ -54,11 +54,13 @@ def test_all_module_routes_and_static_portal_are_mounted():
     for prefix in (
         "/api/v1/auth/login",
         "/api/v1/containers/",
+        "/api/v1/containers/flyweight-specs",
         "/api/v1/routes/optimal-daily",
         "/api/v1/drop-and-go/requests",
         "/api/v1/governance/staff",
         "/api/v1/waste-reports/pending",
         "/api/v1/waste-reports/{report_id}/resolve",
+        "/api/v1/plant/material-specs",
         "/api/v1/plant/packages/pending",
         "/api/v1/plant/packages/{package_code}/process",
     ):

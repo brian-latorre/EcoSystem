@@ -4,15 +4,8 @@ from sqlalchemy.orm import Session
 from app.modules.auth.models import User
 from app.modules.drop_and_go.models import DropAndGoRequest
 from app.modules.governance.models import MaterialPointMultiplier
+from app.modules.plant.flyweight import MaterialFlyweightFactory
 from app.modules.plant.models import PlantProcessingRecord
-
-
-DEFAULT_MATERIAL_RATES = {
-    "PLASTICO": (5, 1.45),
-    "PAPEL": (3, 0.95),
-    "VIDRIO": (2, 0.30),
-    "METAL": (8, 2.10),
-}
 
 
 class PlantRepository:
@@ -45,7 +38,8 @@ class PlantRepository:
         record = self._db.scalar(stmt)
         if record:
             return record.points_per_kg, record.co2_saved_per_kg
-        return DEFAULT_MATERIAL_RATES.get(mat_key, (3, 1.0))
+        spec = MaterialFlyweightFactory.get_spec(mat_key)
+        return spec.default_points_per_kg, spec.default_co2_per_kg
 
     def save_processing(
         self,

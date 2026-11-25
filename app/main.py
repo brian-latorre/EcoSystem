@@ -7,7 +7,7 @@ from app.core.database import Base, engine, init_postgis_extension
 
 
 settings = get_settings()
-app = FastAPI(title=settings.PROJECT_NAME, version="1.0.0-Sprint1")
+app = FastAPI(title=settings.PROJECT_NAME, version="2.0.0-Sprint2")
 
 
 app.add_middleware(

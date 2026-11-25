@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.modules.plant.flyweight import MaterialFlyweightFactory
 from app.modules.plant.repository import PlantRepository
 from app.modules.plant.schemas import (
     PlantHistoryItem,
@@ -24,6 +25,16 @@ router = APIRouter(
 
 def get_plant_service(db: Session = Depends(get_db)) -> PlantService:
     return PlantService(PlantRepository(db))
+
+
+@router.get("/material-specs")
+def get_material_specs():
+    specs = MaterialFlyweightFactory.list_known_specs()
+    return {
+        "pattern": "Flyweight",
+        "pool_size": MaterialFlyweightFactory.pool_size(),
+        "specs": specs,
+    }
 
 
 @router.get("/packages/pending", response_model=List[PlantPackageLookupResponse])

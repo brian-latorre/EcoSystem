@@ -1,6 +1,7 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
+import unicodedata
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, text
@@ -62,16 +63,27 @@ class PackageStatusCollectedObserver(ICollectionObserver):
                 pkg.status = "RECOLECTADA"
 
 
+def _normalize_sector(value: str) -> str:
+    decomposed = unicodedata.normalize("NFD", value or "")
+    stripped = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+    return stripped.strip().lower()
+
+
 class CitizenSectorAlertObserver(ICollectionObserver):
     def update(self, db: Session, event: Dict[str, Any]) -> None:
         sector = event.get("zone_sector", "Rímac Centro")
+        target_sector = _normalize_sector(sector)
 
-        reqs = db.scalars(
+        candidates = db.scalars(
             select(DropAndGoRequest).where(
-                DropAndGoRequest.zone_sector == sector,
                 DropAndGoRequest.status == "REGISTRADA",
             )
         ).all()
+
+        reqs = [
+            req for req in candidates
+            if _normalize_sector(req.zone_sector) == target_sector
+        ]
 
         seen_users = set()
 
