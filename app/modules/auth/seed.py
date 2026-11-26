@@ -6,24 +6,52 @@ from app.modules.auth.security import hash_password
 
 DEMO_USERS = [
     {
-        "full_name": "Maria Lopez",
+        "full_name": "María López",
+        "email": "ciudadano@gmail.com",
+        "role": UserRole.CIUDADANO,
+        "zone_sector": "Rímac Centro",
+        "eco_points": 50,
+    },
+    {
+        "full_name": "Carlos Rojas",
+        "email": "conductor@gmail.com",
+        "role": UserRole.CONDUCTOR,
+        "zone_sector": "Rímac Centro",
+        "eco_points": 0,
+    },
+    {
+        "full_name": "Luis Pérez",
+        "email": "operario@gmail.com",
+        "role": UserRole.OPERARIO,
+        "zone_sector": "Planta Rímac",
+        "eco_points": 0,
+    },
+    {
+        "full_name": "Juan Admin",
+        "email": "admin@gmail.com",
+        "role": UserRole.ADMIN,
+        "zone_sector": "Municipalidad",
+        "eco_points": 0,
+    },
+    {
+        "full_name": "María López",
         "email": "ciudadano@rimac.pe",
         "role": UserRole.CIUDADANO,
-        "zone_sector": "Rimac Centro",
+        "zone_sector": "Rímac Centro",
         "eco_points": 50,
     },
     {
         "full_name": "Carlos Rojas",
         "email": "conductor@rimac.pe",
         "role": UserRole.CONDUCTOR,
-        "zone_sector": "Rimac Centro",
+        "zone_sector": "Rímac Centro",
         "eco_points": 0,
     },
     {
-        "full_name": "Luis Perez",
+        "full_name": "Luis Pérez",
         "email": "operario@rimac.pe",
         "role": UserRole.OPERARIO,
-        "zone_sector": "Planta Rimac",
+        "zone_sector": "Planta Rímac",
         "eco_points": 0,
     },
     {

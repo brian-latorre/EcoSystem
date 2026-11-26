@@ -19,6 +19,6 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(120), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(30), default=UserRole.CIUDADANO, nullable=False)
-    zone_sector: Mapped[str] = mapped_column(String(30), default="Rimac Centro", nullable=False)
+    zone_sector: Mapped[str] = mapped_column(String(30), default="Rímac Centro", nullable=False)
     eco_points_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

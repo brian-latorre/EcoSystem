@@ -28,6 +28,11 @@ def on_startup():
         except ImportError:
             pass
     Base.metadata.create_all(bind=engine)
+    try:
+        from app.modules.auth.seed import run_seed
+        run_seed()
+    except Exception:
+        pass
 
 for mod in MODULES:
     try:
