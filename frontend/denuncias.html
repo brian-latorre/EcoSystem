@@ -207,10 +207,11 @@
     );
 
     L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
       {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+        attribution:
+          "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom"
       }
     ).addTo(map);
 
@@ -229,6 +230,62 @@
           : "bg-emerald-50 text-emerald-700 border border-emerald-200");
     }
 
+    let reverseTimer = null;
+    let reverseController = null;
+    let locationVersion = 0;
+
+    function updateAddressFromCoordinates(lat, lon) {
+      clearTimeout(reverseTimer);
+
+      if (reverseController) {
+        reverseController.abort();
+      }
+
+      const version = ++locationVersion;
+      const previousAddress = refInput.value;
+
+      reverseTimer = setTimeout(async () => {
+        const controller = new AbortController();
+        reverseController = controller;
+
+        try {
+          const url = new URL(
+            "https://nominatim.openstreetmap.org/reverse"
+          );
+
+          url.searchParams.set("format", "json");
+          url.searchParams.set("lat", String(lat));
+          url.searchParams.set("lon", String(lon));
+          url.searchParams.set("accept-language", "es");
+
+          const response = await fetch(url.toString(), {
+            signal: controller.signal
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (
+            version === locationVersion &&
+            refInput.value === previousAddress &&
+            data.display_name
+          ) {
+            refInput.value = data.display_name.substring(0, 200);
+            locationMsg.textContent =
+              "Dirección aproximada obtenida correctamente.";
+          }
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            locationMsg.textContent =
+              "No se encontró la dirección. Puedes escribirla manualmente.";
+          }
+        }
+      }, 1200);
+    }
+
     function setLocation(lat, lon, moveMap = false) {
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
         return;
@@ -244,13 +301,18 @@
 
         selectedMarker.bindPopup("Ubicación de la denuncia");
 
-        selectedMarker.on("dragend", () => {
-          stopGps();
-          const point = selectedMarker.getLatLng();
-          setLocation(point.lat, point.lng);
-          locationMsg.textContent =
-            "Ubicación elegida arrastrando el marcador.";
-        });
+      selectedMarker.on("dragend", () => {
+        stopGps();
+
+        const point = selectedMarker.getLatLng();
+
+        setLocation(point.lat, point.lng);
+        updateAddressFromCoordinates(point.lat, point.lng);
+
+        locationMsg.textContent =
+          "Ubicación seleccionada. Buscando dirección...";
+      });
+
       } else {
         selectedMarker.setLatLng([lat, lon]);
       }
@@ -262,9 +324,15 @@
 
     map.on("click", (event) => {
       stopGps();
-      setLocation(event.latlng.lat, event.latlng.lng);
+
+      const lat = event.latlng.lat;
+      const lon = event.latlng.lng;
+
+      setLocation(lat, lon);
+      updateAddressFromCoordinates(lat, lon);
+
       locationMsg.textContent =
-        "Ubicación elegida manualmente en el mapa.";
+        "Ubicación seleccionada. Buscando dirección...";
     });
 
     function stopGps() {
