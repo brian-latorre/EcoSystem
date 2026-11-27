@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from app.core.config import get_settings
 from app.core.database import Base, engine, init_postgis_extension
 
@@ -29,8 +30,23 @@ def on_startup():
             pass
     Base.metadata.create_all(bind=engine)
     try:
-        from app.modules.auth.seed import run_seed
-        run_seed()
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE abandoned_waste_reports "
+                    "ALTER COLUMN photo_evidence_url TYPE TEXT;"
+                )
+            )
+    except Exception:
+        pass
+    try:
+        from app.modules.auth.seed import run_seed as seed_auth
+        from app.modules.containers.seed import run_seed as seed_containers
+        from app.modules.governance.seed import run_seed as seed_governance
+
+        seed_auth()
+        seed_containers()
+        seed_governance()
     except Exception:
         pass
 

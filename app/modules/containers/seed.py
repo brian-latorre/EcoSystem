@@ -1,4 +1,6 @@
-from sqlalchemy import select
+import json
+from pathlib import Path
+from sqlalchemy import select, text
 from geoalchemy2.elements import WKTElement
 from app.core.database import SessionLocal
 from app.modules.containers.models import Container
@@ -61,13 +63,42 @@ RIMAC_SEED_CONTAINERS = [
     }
 ]
 
-# Función para ejecutar la semilla de contenedores en la base de datos
+def seed_rimac_boundary(db):
+    geojson_path = Path(__file__).resolve().parents[3] / "data" / "geo" / "rimac.geojson"
+    if not geojson_path.exists():
+        return
+    with open(geojson_path, "r", encoding="utf-8-sig") as file:
+        data = json.load(file)
+    features = data.get("features", [])
+    if not features:
+        return
+    geometry_json = json.dumps(features[0]["geometry"])
+    db.execute(
+        text(
+            """
+            INSERT INTO district_boundaries (ubigeo, name, geom)
+            VALUES (
+                '150128',
+                'RIMAC',
+                ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(:geometry), 4326))
+            )
+            ON CONFLICT (ubigeo)
+            DO UPDATE SET
+                name = EXCLUDED.name,
+                geom = EXCLUDED.geom
+            """
+        ),
+        {"geometry": geometry_json},
+    )
+
+
 def run_seed():
     db = SessionLocal()
     created = 0
     skipped = 0
 
     try:
+        seed_rimac_boundary(db)
         for item in RIMAC_SEED_CONTAINERS:
             existing = db.scalar(
                 select(Container).where(

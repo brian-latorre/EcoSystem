@@ -6,9 +6,11 @@ import unicodedata
 from sqlalchemy.orm import Session
 from sqlalchemy import select, text
 
-from app.modules.drop_and_go.models import (
-    DropAndGoRequest,
-    CitizenAlertNotification,
+from app.modules.drop_and_go.models import DropAndGoRequest
+from app.modules.drop_and_go.notifiers import (
+    EmailAuditDecorator,
+    InAppDatabaseNotifier,
+    WebPushBannerDecorator,
 )
 
 
@@ -86,19 +88,20 @@ class CitizenSectorAlertObserver(ICollectionObserver):
         ]
 
         seen_users = set()
+        notifier = EmailAuditDecorator(
+            WebPushBannerDecorator(InAppDatabaseNotifier())
+        )
 
         for r in reqs:
             if r.citizen_id not in seen_users:
-                db.add(
-                    CitizenAlertNotification(
-                        citizen_id=r.citizen_id,
-                        title="Camión de Reciclaje en Proximidad",
-                        message=(
-                            f"El camión recolector está en camino a "
-                            f"{sector}. Saca tu paquete {r.package_code}."
-                        ),
-                        channel="PUSH_NOTIFICATION",
-                    )
+                notifier.send(
+                    db=db,
+                    citizen_id=r.citizen_id,
+                    title="Camión de Reciclaje en Proximidad",
+                    message=(
+                        f"El camión recolector está en camino a "
+                        f"{sector}. Saca tu paquete {r.package_code}."
+                    ),
                 )
                 seen_users.add(r.citizen_id)
 
