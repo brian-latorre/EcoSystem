@@ -2,74 +2,473 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>EcoSystem - Panel de Gobernanza y Políticas de Negocio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoSystem - Panel Municipal y Gobernanza</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
 </head>
-<body class="bg-gray-100 text-gray-900 min-h-screen p-6">
-  <div class="max-w-4xl mx-auto space-y-6">
-    <div class="bg-white p-5 rounded border border-gray-300">
-      <h2 class="text-xl font-bold">Gobernanza Municipal - Políticas de Negocio (RF-018)</h2>
-      <p class="text-sm text-gray-600">Actualización en caliente de parámetros y multiplicadores</p>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white p-5 rounded border border-gray-300 space-y-3">
-        <h3 class="font-semibold text-gray-800">Actualizar Umbral de Reportes (RF-004)</h3>
-        <input id="threshVal" type="number" value="3" class="w-full bg-gray-50 border border-gray-300
-rounded p-2">
-        <button onclick="updateThreshold()" class="w-full bg-gray-900 text-white hover:bg-gray-800
-py-2 rounded font-semibold text-sm">
-          Guardar Umbral
-        </button>
-      </div>
-      <div class="bg-white p-5 rounded border border-gray-300 space-y-3">
-        <h3 class="font-semibold text-gray-800">Actualizar Multiplicador de Puntos (RF-018)</h3>
-        <div class="grid grid-cols-2 gap-2">
-          <input id="matType" type="text" value="PLASTICO" class="bg-gray-50 border border-gray-300
-rounded p-2">
-          <input id="matPts" type="number" value="5" class="bg-gray-50 border border-gray-300 rounded
-p-2">
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-6">
+  <main class="max-w-6xl mx-auto space-y-6">
+    <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold tracking-wider text-slate-700 uppercase bg-slate-100 px-2.5 py-0.5 rounded-full">
+            Gobernanza Municipal
+          </span>
+          <span id="adminBadge" class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+            Administración Rímac
+          </span>
         </div>
-        <button onclick="saveMultiplier()" class="w-full bg-gray-900 text-white hover:bg-gray-800 py-
-2 rounded font-semibold text-sm">
-          Guardar Multiplicador
+        <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Panel de Control, Personal y Fiscalización</h1>
+        <p class="text-xs text-slate-500 mt-0.5">Políticas dinámicas, personal operativo y atención de denuncias</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="refreshAllBtn" type="button" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Actualizar Panel
         </button>
       </div>
-    </div>
-    <div class="bg-white p-5 rounded border border-gray-300">
-      <h3 class="font-semibold mb-2 text-gray-800 border-b pb-1">Políticas Activas en Base de
-Datos</h3>
-      <pre id="policiesOut" class="bg-gray-50 p-3 rounded text-xs text-gray-800 border border-gray-
-200 overflow-x-auto"></pre>
-    </div>
-  </div>
+    </header>
+
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Umbral Llenado Activo</p>
+        <p id="kpiThreshold" class="text-2xl font-extrabold text-slate-900 mt-1">3</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Personal Operativo</p>
+        <p id="kpiStaff" class="text-2xl font-extrabold text-emerald-600 mt-1">0</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Denuncias Pendientes</p>
+        <p id="kpiReports" class="text-2xl font-extrabold text-amber-600 mt-1">0</p>
+      </div>
+    </section>
+
+    <div id="adminToast" class="hidden rounded-xl p-3 text-sm font-medium"></div>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">Políticas de Negocio Dinámicas</h2>
+        <div class="space-y-3">
+          <label class="block text-xs font-semibold text-slate-600 uppercase">Umbral mínimo de reportes para estado LLENO</label>
+          <div class="flex gap-2">
+            <input id="threshVal" type="number" min="1" step="1" value="3" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <button id="saveThreshBtn" type="button" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition">
+              Guardar Umbral
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-3 pt-2 border-t border-slate-100">
+          <label class="block text-xs font-semibold text-slate-600 uppercase">Multiplicador de Puntos por Material (pts/kg)</label>
+          <div class="grid grid-cols-3 gap-2">
+            <select id="matType" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              <option value="PLASTICO">PLASTICO</option>
+              <option value="PAPEL">PAPEL</option>
+              <option value="VIDRIO">VIDRIO</option>
+              <option value="METAL">METAL</option>
+            </select>
+            <input id="matPts" type="number" min="1" value="5" placeholder="Puntos" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <input id="matCo2" type="number" min="0.1" step="0.05" value="1.45" placeholder="CO2/kg" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+          </div>
+          <button id="saveMultBtn" type="button" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold transition">
+            Guardar Multiplicador
+          </button>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-600 uppercase">Multiplicadores Activos</span>
+          </div>
+          <div id="multipliersList" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">Gestión de Personal Operativo</h2>
+        <form id="staffForm" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Nombre Completo</label>
+              <input id="staffName" type="text" required placeholder="Carlos Rojas" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Correo Institucional</label>
+              <input id="staffEmail" type="email" required placeholder="conductor@rimac.gob.pe" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Contraseña</label>
+              <input id="staffPassword" type="password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Rol Asignado</label>
+              <select id="staffRole" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="CONDUCTOR">CONDUCTOR</option>
+                <option value="OPERARIO">OPERARIO</option>
+                <option value="COORDINADOR">COORDINADOR</option>
+                <option value="SUPERVISOR">SUPERVISOR</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Sector / Turno</label>
+              <input id="staffSector" type="text" value="Rímac Centro" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold transition">
+            Registrar Personal Operativo
+          </button>
+        </form>
+
+        <div class="pt-2 border-t border-slate-100">
+          <h3 class="text-xs font-semibold text-slate-600 uppercase mb-2">Nómina Registrada</h3>
+          <div class="overflow-x-auto max-h-56 overflow-y-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                <tr>
+                  <th class="px-3 py-2">Personal</th>
+                  <th class="px-3 py-2">Rol</th>
+                  <th class="px-3 py-2">Estado</th>
+                  <th class="px-3 py-2 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="staffTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Bandeja del Coordinador Ambiental — Denuncias de Basura</h2>
+          <p class="text-xs text-slate-500">Reportes georreferenciados en vía pública pendientes de limpieza y cierre.</p>
+        </div>
+        <button id="refreshReportsBtn" type="button" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-xl transition">
+          Recargar Denuncias
+        </button>
+      </div>
+      <div id="wasteReportsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+  </main>
+
   <script>
-    const API = "http://127.0.0.1:8000/api/v1/governance";
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const GOV_API = `${BASE_URL}/api/v1/governance`;
+    const REPORTS_API = `${BASE_URL}/api/v1/waste-reports`;
+
+    function renderAdminSession() {
+      const raw = localStorage.getItem("ecosystem_user");
+      if (!raw) return;
+      try {
+        const user = JSON.parse(raw);
+        document.getElementById("adminBadge").textContent = `${user.full_name} (${user.role})`;
+      } catch (e) {}
+    }
+
+    function showToast(text, isError = false) {
+      const el = document.getElementById("adminToast");
+      el.textContent = text;
+      el.className = isError
+        ? "rounded-xl p-3 text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200"
+        : "rounded-xl p-3 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+    }
+
     async function loadPolicies() {
-      const res = await fetch(`${API}/policies`);
-      const data = await res.json();
-      document.getElementById('policiesOut').innerText = JSON.stringify(data, null, 2);
+      try {
+        const res = await fetch(`${GOV_API}/policies`);
+        const data = await res.json();
+
+        const thresh = (data.system_parameters || []).find(
+          (p) => p.param_key === "DEFAULT_CONTAINER_REPORT_THRESHOLD"
+        );
+        if (thresh) {
+          document.getElementById("kpiThreshold").textContent = thresh.param_value;
+          document.getElementById("threshVal").value = thresh.param_value;
+        }
+
+        const multContainer = document.getElementById("multipliersList");
+        multContainer.innerHTML = "";
+        const multipliers = data.material_multipliers || [];
+        if (!multipliers.length) {
+          const empty = document.createElement("p");
+          empty.className = "col-span-full text-slate-400";
+          empty.textContent = "Sin multiplicadores registrados.";
+          multContainer.appendChild(empty);
+          return;
+        }
+
+        multipliers.forEach((m) => {
+          const card = document.createElement("div");
+          card.className = "bg-slate-50 border border-slate-200 rounded-xl p-2.5";
+          const mat = document.createElement("p");
+          mat.className = "font-bold text-slate-800";
+          mat.textContent = m.material_type;
+          const pts = document.createElement("p");
+          pts.className = "text-emerald-700 font-semibold";
+          pts.textContent = `${m.points_per_kg} pts/kg`;
+          card.append(mat, pts);
+          multContainer.appendChild(card);
+        });
+      } catch (err) {
+        showToast(`Error al cargar políticas: ${err.message}`, true);
+      }
     }
+
+    function getAuthHeaders(withJson = false) {
+      const headers = withJson ? { "Content-Type": "application/json" } : {};
+      const raw = localStorage.getItem("ecosystem_user");
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          if (user.access_token) headers.Authorization = `Bearer ${user.access_token}`;
+        } catch (e) {}
+      }
+      return headers;
+    }
+
     async function updateThreshold() {
-      const val = parseFloat(document.getElementById('threshVal').value || '3');
-      await fetch(`${API}/policies/parameters/DEFAULT_CONTAINER_REPORT_THRESHOLD`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ param_value: val, description: 'Umbral mínimo de reportes ciudadanos'
-})
-      });
-      loadPolicies();
+      const val = parseFloat(document.getElementById("threshVal").value || "3");
+      try {
+        const res = await fetch(`${GOV_API}/policies/parameters/DEFAULT_CONTAINER_REPORT_THRESHOLD`, {
+          method: "PUT",
+          headers: getAuthHeaders(true),
+          body: JSON.stringify({ param_value: val, description: "Umbral mínimo de reportes ciudadanos" })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        showToast(`Umbral de reportes actualizado a ${val}.`);
+        await loadPolicies();
+      } catch (err) {
+        showToast(`Error al actualizar umbral: ${err.message}`, true);
+      }
     }
+
     async function saveMultiplier() {
-      const mat = document.getElementById('matType').value;
-      const pts = parseInt(document.getElementById('matPts').value || '5');
-      await fetch(`${API}/policies/multipliers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ material_type: mat, points_per_kg: pts, co2_saved_per_kg: 1.45 })
-      });
-      loadPolicies();
+      const mat = document.getElementById("matType").value;
+      const pts = parseInt(document.getElementById("matPts").value || "5", 10);
+      const co2 = parseFloat(document.getElementById("matCo2").value || "1.45");
+      try {
+        const res = await fetch(`${GOV_API}/policies/multipliers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ material_type: mat, points_per_kg: pts, co2_saved_per_kg: co2 })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        showToast(`Multiplicador ${mat} actualizado a ${pts} pts/kg.`);
+        await loadPolicies();
+      } catch (err) {
+        showToast(`Error al guardar multiplicador: ${err.message}`, true);
+      }
     }
-    loadPolicies();
+
+    async function loadStaff() {
+      const tbody = document.getElementById("staffTableBody");
+      tbody.innerHTML = "";
+      try {
+        const res = await fetch(`${GOV_API}/staff`);
+        const staff = await res.json();
+        document.getElementById("kpiStaff").textContent = staff.filter((s) => s.is_active).length;
+
+        if (!staff.length) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 4;
+          td.className = "px-3 py-4 text-center text-slate-400";
+          td.textContent = "No hay personal operativo registrado.";
+          tr.appendChild(td);
+          tbody.appendChild(tr);
+          return;
+        }
+
+        staff.forEach((member) => {
+          const tr = document.createElement("tr");
+
+          const tdInfo = document.createElement("td");
+          tdInfo.className = "px-3 py-2";
+          const nameEl = document.createElement("p");
+          nameEl.className = "font-semibold text-slate-900";
+          nameEl.textContent = member.full_name;
+          const emailEl = document.createElement("p");
+          emailEl.className = "text-[11px] text-slate-500";
+          emailEl.textContent = `${member.email} · ${member.zone_sector}`;
+          tdInfo.append(nameEl, emailEl);
+
+          const tdRole = document.createElement("td");
+          tdRole.className = "px-3 py-2";
+          const roleBadge = document.createElement("span");
+          roleBadge.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700";
+          roleBadge.textContent = member.role;
+          tdRole.appendChild(roleBadge);
+
+          const tdState = document.createElement("td");
+          tdState.className = "px-3 py-2";
+          const stateBadge = document.createElement("span");
+          stateBadge.className = member.is_active
+            ? "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700"
+            : "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500";
+          stateBadge.textContent = member.is_active ? "Activo" : "Inactivo";
+          tdState.appendChild(stateBadge);
+
+          const tdAction = document.createElement("td");
+          tdAction.className = "px-3 py-2 text-right";
+          if (member.is_active) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = "Desactivar";
+            btn.className = "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition";
+            btn.addEventListener("click", () => deactivateStaff(member.id, member.full_name));
+            tdAction.appendChild(btn);
+          }
+
+          tr.append(tdInfo, tdRole, tdState, tdAction);
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        showToast(`Error al cargar personal: ${err.message}`, true);
+      }
+    }
+
+    async function deactivateStaff(userId, fullName) {
+      try {
+        const res = await fetch(`${GOV_API}/staff/${userId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        showToast(`Personal ${fullName} desactivado correctamente.`);
+        await loadStaff();
+      } catch (err) {
+        showToast(`Error al desactivar personal: ${err.message}`, true);
+      }
+    }
+
+    document.getElementById("staffForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        full_name: document.getElementById("staffName").value,
+        email: document.getElementById("staffEmail").value,
+        password: document.getElementById("staffPassword").value,
+        role: document.getElementById("staffRole").value,
+        zone_sector: document.getElementById("staffSector").value
+      };
+      try {
+        const res = await fetch(`${GOV_API}/staff`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        showToast(`Personal ${data.full_name} (${data.role}) registrado.`);
+        e.target.reset();
+        document.getElementById("staffSector").value = "Rímac Centro";
+        await loadStaff();
+      } catch (err) {
+        showToast(`Error al registrar personal: ${err.message}`, true);
+      }
+    });
+
+    async function resolveWasteReport(reportId) {
+      try {
+        const res = await fetch(`${REPORTS_API}/${reportId}/resolve`, { method: "PATCH" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        showToast(`Denuncia #${reportId} marcada como ATENDIDA.`);
+        await loadWasteReports();
+      } catch (err) {
+        showToast(`No se pudo resolver la denuncia #${reportId}: ${err.message}`, true);
+      }
+    }
+
+    async function loadWasteReports() {
+      const listEl = document.getElementById("wasteReportsList");
+      listEl.innerHTML = "";
+      try {
+        const res = await fetch(`${REPORTS_API}/pending`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const reports = await res.json();
+        document.getElementById("kpiReports").textContent = reports.length;
+
+        if (!reports.length) {
+          const empty = document.createElement("div");
+          empty.className = "col-span-full bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-4 text-center text-xs font-medium";
+          empty.textContent = "No hay denuncias pendientes de atención en la vía pública.";
+          listEl.appendChild(empty);
+          return;
+        }
+
+        reports.forEach((rep) => {
+          const card = document.createElement("article");
+          card.className = "bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between gap-3";
+
+          const top = document.createElement("div");
+          top.className = "space-y-1.5";
+
+          const head = document.createElement("div");
+          head.className = "flex items-center justify-between";
+          const idBadge = document.createElement("span");
+          idBadge.className = "text-[11px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full";
+          idBadge.textContent = `Reporte #${rep.id}`;
+          const statusBadge = document.createElement("span");
+          statusBadge.className = "text-[11px] font-semibold text-slate-500";
+          statusBadge.textContent = rep.status;
+          head.append(idBadge, statusBadge);
+
+          const desc = document.createElement("p");
+          desc.className = "text-sm font-bold text-slate-900";
+          desc.textContent = rep.description;
+
+          const addr = document.createElement("p");
+          addr.className = "text-xs text-slate-600";
+          addr.textContent = rep.address_reference;
+
+          const coords = document.createElement("p");
+          coords.className = "text-[11px] font-mono text-slate-500";
+          coords.textContent = `${Number(rep.latitude).toFixed(5)}, ${Number(rep.longitude).toFixed(5)}`;
+
+          top.append(head, desc, addr, coords);
+
+          if (rep.photo_evidence_url && rep.photo_evidence_url.startsWith("data:image")) {
+            const img = document.createElement("img");
+            img.src = rep.photo_evidence_url;
+            img.alt = "Evidencia ciudadana";
+            img.className = "w-full h-28 object-cover rounded-lg border border-slate-200 mt-2";
+            top.appendChild(img);
+          }
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = "Marcar como Atendida";
+          btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold transition";
+          btn.addEventListener("click", () => resolveWasteReport(rep.id));
+
+          card.append(top, btn);
+          listEl.appendChild(card);
+        });
+      } catch (err) {
+        const warn = document.createElement("div");
+        warn.className = "col-span-full bg-slate-50 border border-slate-200 text-slate-500 rounded-xl p-4 text-center text-xs";
+        warn.textContent = `No se pudieron obtener las denuncias (${err.message}).`;
+        listEl.appendChild(warn);
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([loadPolicies(), loadStaff(), loadWasteReports()]);
+    }
+
+    document.getElementById("saveThreshBtn").addEventListener("click", updateThreshold);
+    document.getElementById("saveMultBtn").addEventListener("click", saveMultiplier);
+    document.getElementById("refreshReportsBtn").addEventListener("click", loadWasteReports);
+    document.getElementById("refreshAllBtn").addEventListener("click", refreshAll);
+
+    renderAdminSession();
+    refreshAll();
   </script>
+  <script src="assets/eco-shell.js"></script>
 </body>
 </html>

@@ -7,10 +7,13 @@ from app.modules.drop_and_go.observers import (
 from typing import List
 
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.modules.drop_and_go.models import CitizenAlertNotification
 from app.modules.drop_and_go.schemas import (
+    CitizenNotificationResponse,
     DropAndGoCreateInput,
     DropAndGoResponse,
 )
@@ -94,3 +97,19 @@ def announce_truck_arrival(
             f"Alertas emitidas para vecinos del sector {zone_sector}."
         ),
     }
+
+
+@router.get(
+    "/notifications/{citizen_id}",
+    response_model=List[CitizenNotificationResponse],
+)
+def get_citizen_notifications(
+    citizen_id: int,
+    db: Session = Depends(get_db),
+):
+    return db.scalars(
+        select(CitizenAlertNotification)
+        .where(CitizenAlertNotification.citizen_id == citizen_id)
+        .order_by(CitizenAlertNotification.created_at.desc())
+        .limit(20)
+    ).all()

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoSystem - Estación de Operario en Planta</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-6">
+  <main class="max-w-6xl mx-auto space-y-6">
+    <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold tracking-wider text-teal-700 uppercase bg-teal-50 px-2.5 py-0.5 rounded-full">
+            Planta de Valorización
+          </span>
+          <span id="operatorBadge" class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+            Operario en Turno
+          </span>
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Estación de Pesaje y Clasificación</h1>
+        <p class="text-xs text-slate-500 mt-0.5">Validación de códigos Drop &amp; Go, pesaje verificado y acreditación de puntos</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="refreshBtn" type="button" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Actualizar Cola
+        </button>
+      </div>
+    </header>
+
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Paquetes en Cola</p>
+        <p id="kpiPending" class="text-2xl font-extrabold text-amber-600 mt-1">0</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Procesados en Planta</p>
+        <p id="kpiProcessed" class="text-2xl font-extrabold text-slate-900 mt-1">0</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Peso Verificado</p>
+        <p id="kpiWeight" class="text-2xl font-extrabold text-teal-600 mt-1">0.0 kg</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Puntos Acreditados</p>
+        <p id="kpiPoints" class="text-2xl font-extrabold text-emerald-600 mt-1">0</p>
+      </div>
+    </section>
+
+    <div id="plantToast" class="hidden rounded-xl p-3 text-sm font-medium"></div>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">1. Identificar Paquete (#ECO-2026)</h2>
+        <div class="flex gap-2">
+          <input id="lookupCode" type="text" placeholder="Ej. ECO-2026-A1B2" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono uppercase">
+          <button id="lookupBtn" type="button" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition">
+            Buscar Código
+          </button>
+        </div>
+
+        <div id="selectedPkgBox" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-xs space-y-1">
+          <div class="flex items-center justify-between">
+            <span id="selCode" class="font-mono font-bold text-sm text-emerald-900"></span>
+            <span id="selStatus" class="px-2 py-0.5 rounded-full bg-white text-emerald-800 font-semibold border border-emerald-200"></span>
+          </div>
+          <p id="selMeta" class="text-emerald-800"></p>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100">
+          <h3 class="text-xs font-semibold text-slate-600 uppercase mb-2">Paquetes Pendientes de Validación</h3>
+          <div id="pendingList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">2. Registro de Peso Real y Clasificación</h2>
+        <form id="processForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Código de Paquete Seleccionado</label>
+            <input id="procCode" type="text" required readonly placeholder="Selecciona o busca un paquete" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Peso Real Balanza (kg)</label>
+              <input id="procWeight" type="number" min="0" max="500" step="0.1" value="2.5" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Material Verificado</label>
+              <select id="procMaterial" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm">
+                <option value="PLASTICO">PLASTICO</option>
+                <option value="PAPEL">PAPEL</option>
+                <option value="VIDRIO">VIDRIO</option>
+                <option value="METAL">METAL</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="flex items-center gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 cursor-pointer">
+            <input id="procContaminated" type="checkbox" class="w-4 h-4 accent-rose-600">
+            <span class="text-xs font-semibold text-rose-800">
+              Material contaminado o basura común (No acredita puntos al ciudadano)
+            </span>
+          </label>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Observaciones de Planta</label>
+            <input id="procObs" type="text" maxlength="250" placeholder="Ej. Botellas limpias y compactadas" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm">
+          </div>
+
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold transition shadow-sm">
+            Registrar Peso y Acreditar Puntos
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h2 class="text-base font-bold text-slate-900">Historial Reciente en Planta</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+            <tr>
+              <th class="px-3 py-2">Código</th>
+              <th class="px-3 py-2">Ciudadano</th>
+              <th class="px-3 py-2">Material</th>
+              <th class="px-3 py-2">Peso (kg)</th>
+              <th class="px-3 py-2">Puntos</th>
+              <th class="px-3 py-2">Resultado</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const PLANT_API = `${BASE_URL}/api/v1/plant`;
+
+    function getAuthHeaders(withJson = false) {
+      const headers = withJson ? { "Content-Type": "application/json" } : {};
+      const raw = localStorage.getItem("ecosystem_user");
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          if (user.access_token) headers.Authorization = `Bearer ${user.access_token}`;
+        } catch (e) {}
+      }
+      return headers;
+    }
+
+    function getCurrentOperatorId() {
+      const raw = localStorage.getItem("ecosystem_user");
+      if (!raw) return 1;
+      try {
+        const user = JSON.parse(raw);
+        document.getElementById("operatorBadge").textContent = `${user.full_name} (${user.role})`;
+        return user.user_id || 1;
+      } catch (e) {
+        return 1;
+      }
+    }
+
+    function showToast(text, isError = false) {
+      const el = document.getElementById("plantToast");
+      el.textContent = text;
+      el.className = isError
+        ? "rounded-xl p-3 text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200"
+        : "rounded-xl p-3 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+    }
+
+    function selectPackage(pkg) {
+      document.getElementById("procCode").value = pkg.package_code;
+      document.getElementById("lookupCode").value = pkg.package_code;
+      if (["PLASTICO", "PAPEL", "VIDRIO", "METAL"].includes(pkg.material_type)) {
+        document.getElementById("procMaterial").value = pkg.material_type;
+      }
+      document.getElementById("selCode").textContent = pkg.package_code;
+      document.getElementById("selStatus").textContent = pkg.status;
+      document.getElementById("selMeta").textContent =
+        `Ciudadano #${pkg.citizen_id} · Contenedor ${pkg.container_code} · Declarado: ${pkg.material_type} (${pkg.weight_range_declared})`;
+      document.getElementById("selectedPkgBox").classList.remove("hidden");
+    }
+
+    async function lookupCode() {
+      const code = document.getElementById("lookupCode").value.trim();
+      if (!code) {
+        showToast("Ingresa un código de paquete para buscar.", true);
+        return;
+      }
+      try {
+        const res = await fetch(`${PLANT_API}/packages/${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        selectPackage(data);
+        showToast(`Paquete ${data.package_code} cargado para pesaje.`);
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadPending() {
+      const listEl = document.getElementById("pendingList");
+      listEl.innerHTML = "";
+      try {
+        const res = await fetch(`${PLANT_API}/packages/pending`);
+        const items = await res.json();
+        document.getElementById("kpiPending").textContent = items.length;
+        if (!items.length) {
+          const empty = document.createElement("p");
+          empty.className = "text-xs text-slate-400 py-3 text-center";
+          empty.textContent = "No hay paquetes pendientes por procesar.";
+          listEl.appendChild(empty);
+          return;
+        }
+        items.forEach((pkg) => {
+          const row = document.createElement("button");
+          row.type = "button";
+          row.className = "w-full text-left p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 transition flex items-center justify-between gap-2";
+          const left = document.createElement("div");
+          const codeEl = document.createElement("p");
+          codeEl.className = "font-mono font-bold text-xs text-slate-900";
+          codeEl.textContent = pkg.package_code;
+          const infoEl = document.createElement("p");
+          infoEl.className = "text-[11px] text-slate-500";
+          infoEl.textContent = `${pkg.material_type} · ${pkg.container_code} · Ciudadano #${pkg.citizen_id}`;
+          left.append(codeEl, infoEl);
+
+          const badge = document.createElement("span");
+          badge.className = "text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700";
+          badge.textContent = pkg.status;
+          row.append(left, badge);
+          row.addEventListener("click", () => selectPackage(pkg));
+          listEl.appendChild(row);
+        });
+      } catch (err) {
+        showToast(`Error al cargar cola pendiente: ${err.message}`, true);
+      }
+    }
+
+    async function loadHistory() {
+      const tbody = document.getElementById("historyBody");
+      tbody.innerHTML = "";
+      try {
+        const res = await fetch(`${PLANT_API}/history`);
+        const records = await res.json();
+        document.getElementById("kpiProcessed").textContent = records.length;
+        const totalKg = records.reduce((acc, r) => acc + Number(r.verified_weight_kg || 0), 0);
+        const totalPts = records.reduce((acc, r) => acc + Number(r.points_awarded || 0), 0);
+        document.getElementById("kpiWeight").textContent = `${totalKg.toFixed(1)} kg`;
+        document.getElementById("kpiPoints").textContent = totalPts;
+
+        if (!records.length) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 6;
+          td.className = "px-3 py-4 text-center text-slate-400";
+          td.textContent = "Aún no se han procesado paquetes en planta.";
+          tr.appendChild(td);
+          tbody.appendChild(tr);
+          return;
+        }
+
+        records.forEach((rec) => {
+          const tr = document.createElement("tr");
+          const tdCode = document.createElement("td");
+          tdCode.className = "px-3 py-2 font-mono font-bold text-slate-900";
+          tdCode.textContent = rec.package_code;
+
+          const tdCit = document.createElement("td");
+          tdCit.className = "px-3 py-2";
+          tdCit.textContent = `#${rec.citizen_id}`;
+
+          const tdMat = document.createElement("td");
+          tdMat.className = "px-3 py-2";
+          tdMat.textContent = rec.verified_material;
+
+          const tdWeight = document.createElement("td");
+          tdWeight.className = "px-3 py-2";
+          tdWeight.textContent = `${rec.verified_weight_kg} kg`;
+
+          const tdPts = document.createElement("td");
+          tdPts.className = "px-3 py-2 font-bold text-emerald-700";
+          tdPts.textContent = `+${rec.points_awarded} pts`;
+
+          const tdRes = document.createElement("td");
+          tdRes.className = "px-3 py-2";
+          const badge = document.createElement("span");
+          badge.className = rec.is_contaminated
+            ? "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700"
+            : "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700";
+          badge.textContent = rec.is_contaminated ? "Rechazado (0 pts)" : "Aprobado";
+          tdRes.appendChild(badge);
+
+          tr.append(tdCode, tdCit, tdMat, tdWeight, tdPts, tdRes);
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        showToast(`Error al cargar historial: ${err.message}`, true);
+      }
+    }
+
+    document.getElementById("processForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = document.getElementById("procCode").value.trim();
+      if (!code) {
+        showToast("Selecciona primero un paquete pendiente.", true);
+        return;
+      }
+      const payload = {
+        verified_weight_kg: parseFloat(document.getElementById("procWeight").value || "0"),
+        verified_material: document.getElementById("procMaterial").value,
+        is_contaminated: document.getElementById("procContaminated").checked,
+        operator_id: getCurrentOperatorId(),
+        observations: document.getElementById("procObs").value.trim()
+      };
+      try {
+        const res = await fetch(`${PLANT_API}/packages/${encodeURIComponent(code)}/process`, {
+          method: "POST",
+          headers: getAuthHeaders(true),
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        showToast(
+          `Paquete ${data.package_code} procesado con ${data.evaluator_used}: +${data.points_awarded} pts (Saldo ciudadano: ${data.citizen_new_balance} pts).`
+        );
+        document.getElementById("procCode").value = "";
+        document.getElementById("procObs").value = "";
+        document.getElementById("procContaminated").checked = false;
+        document.getElementById("selectedPkgBox").classList.add("hidden");
+        await Promise.all([loadPending(), loadHistory()]);
+      } catch (err) {
+        showToast(`Error al procesar paquete: ${err.message}`, true);
+      }
+    });
+
+    document.getElementById("lookupBtn").addEventListener("click", lookupCode);
+    document.getElementById("refreshBtn").addEventListener("click", () => Promise.all([loadPending(), loadHistory()]));
+
+    getCurrentOperatorId();
+    Promise.all([loadPending(), loadHistory()]);
+  </script>
+  <script src="assets/eco-shell.js"></script>
+</body>
+</html>

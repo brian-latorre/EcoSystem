@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.modules.containers.models import (Container, ContainerCitizenReport, ContainerFullEvent)
+from app.modules.governance.models import SystemParameterPolicy
 
 # Clase de servicio para manejar la lógica de reportes de contenedores
 class ContainerThresholdService:
@@ -10,6 +11,20 @@ class ContainerThresholdService:
     def __init__(self, db: Session):
         self.db = db
         self.settings = get_settings()
+
+    def _resolve_report_threshold(self) -> int:
+        try:
+            with self.db.begin_nested():
+                policy = self.db.scalar(
+                    select(SystemParameterPolicy).where(
+                        SystemParameterPolicy.param_key == "DEFAULT_CONTAINER_REPORT_THRESHOLD"
+                    )
+                )
+                if policy is not None and policy.param_value >= 1:
+                    return int(policy.param_value)
+        except Exception:
+            pass
+        return self.settings.DEFAULT_CONTAINER_REPORT_THRESHOLD
 
     def report_container_full(self,
         container_id: int,
@@ -57,13 +72,12 @@ class ContainerThresholdService:
                 detail="El ciudadano ya reportó este contenedor"
             )
 
-        # Registrar el voto y actualizar el contador
         vote = ContainerCitizenReport(
             container_id=container_id,
             citizen_id=citizen_id
         )
 
-        threshold = self.settings.DEFAULT_CONTAINER_REPORT_THRESHOLD
+        threshold = self._resolve_report_threshold()
 
         try:
             self.db.add(vote)

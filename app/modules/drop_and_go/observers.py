@@ -1,13 +1,16 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
+import unicodedata
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, text
 
-from app.modules.drop_and_go.models import (
-    DropAndGoRequest,
-    CitizenAlertNotification,
+from app.modules.drop_and_go.models import DropAndGoRequest
+from app.modules.drop_and_go.notifiers import (
+    EmailAuditDecorator,
+    InAppDatabaseNotifier,
+    WebPushBannerDecorator,
 )
 
 
@@ -24,6 +27,15 @@ class ContainerCounterResetObserver(ICollectionObserver):
 
             try:
                 with db.begin_nested():
+                    db.execute(
+                        text(
+                            "DELETE FROM container_citizen_reports "
+                            "WHERE container_id IN ("
+                            "SELECT id FROM containers WHERE code = :c"
+                            ")"
+                        ),
+                        {"c": code},
+                    )
                     db.execute(
                         text(
                             "UPDATE containers "
@@ -53,31 +65,43 @@ class PackageStatusCollectedObserver(ICollectionObserver):
                 pkg.status = "RECOLECTADA"
 
 
+def _normalize_sector(value: str) -> str:
+    decomposed = unicodedata.normalize("NFD", value or "")
+    stripped = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+    return stripped.strip().lower()
+
+
 class CitizenSectorAlertObserver(ICollectionObserver):
     def update(self, db: Session, event: Dict[str, Any]) -> None:
         sector = event.get("zone_sector", "Rímac Centro")
+        target_sector = _normalize_sector(sector)
 
-        reqs = db.scalars(
+        candidates = db.scalars(
             select(DropAndGoRequest).where(
-                DropAndGoRequest.zone_sector == sector,
                 DropAndGoRequest.status == "REGISTRADA",
             )
         ).all()
 
+        reqs = [
+            req for req in candidates
+            if _normalize_sector(req.zone_sector) == target_sector
+        ]
+
         seen_users = set()
+        notifier = EmailAuditDecorator(
+            WebPushBannerDecorator(InAppDatabaseNotifier())
+        )
 
         for r in reqs:
             if r.citizen_id not in seen_users:
-                db.add(
-                    CitizenAlertNotification(
-                        citizen_id=r.citizen_id,
-                        title="Camión de Reciclaje en Proximidad",
-                        message=(
-                            f"El camión recolector está en camino a "
-                            f"{sector}. Saca tu paquete {r.package_code}."
-                        ),
-                        channel="PUSH_NOTIFICATION",
-                    )
+                notifier.send(
+                    db=db,
+                    citizen_id=r.citizen_id,
+                    title="Camión de Reciclaje en Proximidad",
+                    message=(
+                        f"El camión recolector está en camino a "
+                        f"{sector}. Saca tu paquete {r.package_code}."
+                    ),
                 )
                 seen_users.add(r.citizen_id)
 

@@ -20,9 +20,16 @@ except ImportError:
         eco_points_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
         is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+
+STAFF_ROLES = ["CONDUCTOR", "OPERARIO", "COORDINADOR", "SUPERVISOR"]
+
+
 class GovernanceStaffRepository:
     def __init__(self, db: Session):
         self.db = db
+
+    def find_by_email(self, email: str) -> User | None:
+        return self.db.scalar(select(User).where(User.email == email))
 
     def create_staff(self, payload: StaffCreateInput) -> User:
         pwd_hash = hashlib.sha256(payload.password.encode()).hexdigest()
@@ -32,7 +39,7 @@ class GovernanceStaffRepository:
             password_hash=pwd_hash,
             role=payload.role.upper(),
             zone_sector=payload.zone_sector,
-            is_active=True
+            is_active=True,
         )
         self.db.add(user)
         self.db.commit()
@@ -40,7 +47,7 @@ class GovernanceStaffRepository:
         return user
 
     def list_staff(self) -> List[User]:
-        stmt = select(User).where(User.role.in_(["COORDINADOR", "SUPERVISOR"]))
+        stmt = select(User).where(User.role.in_(STAFF_ROLES)).order_by(User.id.desc())
         return list(self.db.scalars(stmt).all())
 
     def deactivate_staff(self, user_id: int) -> bool:

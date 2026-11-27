@@ -2,64 +2,376 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EcoSystem - Ruta Óptima del Conductor (TSP)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-</head>
-<body class="bg-gray-100 text-gray-900 min-h-screen p-6">
-  <div class="max-w-5xl mx-auto space-y-4">
-    <div class="flex items-center justify-between bg-white p-4 rounded border border-gray-300">
-      <div>
-        <h2 class="text-xl font-bold">Hoja de Ruta Diaria — Camión Recolector (Rímac)</h2>
-        <p id="summary" class="text-sm text-gray-600">Cargando cálculo algorítmico TSP...</p>
-      </div>
-      <select id="modeSelect" class="bg-gray-50 border border-gray-300 rounded px-3 py-2 text-sm">
-        <option value="haversine">Estrategia 1: Nearest Neighbor (Haversine)</option>
-        <option value="road">Estrategia 2: Red Vial (Adapter)</option>
-      </select>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div id="map" class="md:col-span-2 h-96 rounded border border-gray-300"></div>
-      <div class="bg-white p-4 rounded border border-gray-300 overflow-y-auto h-96">
-        <h3 class="font-semibold mb-3 border-b pb-1">Secuencia de Paradas</h3>
-        <ol id="stopsList" class="space-y-2 text-sm"></ol>
-      </div>
-    </div>
-  </div>
-  <script>
-    const map = L.map('map').setView([-12.033, -77.029], 14);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
-    }).addTo(map);
-    let routeLayer = L.layerGroup().addTo(map);
-
-    async function loadRoute(mode = 'haversine') {
-      routeLayer.clearLayers();
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/routes/optimal-daily?mode=${mode}`);
-      const data = await res.json();
-      document.getElementById('summary').innerText =
-        `Algoritmo: ${data.algorithm} | Paradas: ${data.total_stops} | Distancia: ${data.total_distance_km} km | Tiempo Est.: ${data.estimated_total_minutes} min`;
-
-      const coords = [[-12.0298, -77.0285]];
-      L.marker([-12.0298, -77.0285]).addTo(routeLayer).bindPopup("<b>Cochera Municipal (Inicio)</b>");
-
-      const listEl = document.getElementById('stopsList');
-      listEl.innerHTML = '';
-      data.ordered_stops.forEach(s => {
-        coords.push([s.latitude, s.longitude]);
-        L.marker([s.latitude, s.longitude]).addTo(routeLayer)
-          .bindPopup(`<b>Parada #${s.sequence_order}: ${s.container_code}</b><br>${s.address}`);
-        listEl.innerHTML += `<li class="p-2 bg-gray-50 rounded border border-gray-200">
-          <span class="font-bold">#${s.sequence_order} ${s.container_code}</span><br>
-          <span class="text-xs text-gray-600">${s.address} (+${s.leg_distance_km} km)</span>
-        </li>`;
-      });
-      L.polyline(coords, { color: '#0f172a', weight: 4 }).addTo(routeLayer);
+  <style>
+    .leaflet-container {
+      z-index: 1;
     }
-    document.getElementById('modeSelect').addEventListener('change', e => loadRoute(e.target.value));
+    .stop-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background-color: #059669;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+    }
+    .depot-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background-color: #0f172a;
+      color: #ffffff;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.4);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-6">
+  <main class="max-w-6xl mx-auto space-y-5">
+    <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold tracking-wider text-emerald-700 uppercase bg-emerald-50 px-2.5 py-0.5 rounded-full">
+            Logística de Recolección
+          </span>
+          <span id="driverBadge" class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+            Conductor en Turno
+          </span>
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Hoja de Ruta Diaria — Rímac</h1>
+        <p id="summary" class="text-xs text-slate-500 mt-0.5">Calculando circuito de recolección...</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <select id="modeSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="haversine">Ruta más cercana</option>
+          <option value="road">Red vial urbana</option>
+          <option value="two_opt">Ruta optimizada sin cruces</option>
+        </select>
+        <button id="refreshRouteBtn" type="button" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Recalcular
+        </button>
+      </div>
+    </header>
+
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Paradas Pendientes</p>
+        <p id="kpiStops" class="text-2xl font-extrabold text-slate-900 mt-1">0</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Distancia Circuito</p>
+        <p id="kpiDistance" class="text-2xl font-extrabold text-emerald-600 mt-1">0.0 km</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Tiempo Estimado</p>
+        <p id="kpiMinutes" class="text-2xl font-extrabold text-blue-600 mt-1">0 min</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase">Vaciados en Turno</p>
+        <p id="kpiEmptied" class="text-2xl font-extrabold text-slate-900 mt-1">0</p>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <h2 class="text-sm font-bold text-slate-900">Notificar llegada al sector</h2>
+        <p class="text-xs text-slate-500">Emite alertas automáticas a vecinos con bolsas Drop &amp; Go registradas en el sector.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <select id="sectorSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-700">
+          <option value="Rímac Centro">Rímac Centro</option>
+          <option value="Alameda de los Descalzos">Alameda de los Descalzos</option>
+          <option value="Av. Alcázar">Av. Alcázar</option>
+          <option value="Caquetá">Caquetá</option>
+        </select>
+        <button id="announceBtn" type="button" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          Anunciar Llegada
+        </button>
+      </div>
+    </section>
+
+    <div id="toastBanner" class="hidden rounded-xl p-3 text-sm font-medium"></div>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-3 shadow-sm">
+        <div id="map" class="h-[460px] w-full rounded-xl"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col h-[484px]">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+          <h2 class="text-sm font-bold text-slate-900">Secuencia de Paradas</h2>
+          <span id="algoBadge" class="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Ruta</span>
+        </div>
+        <ol id="stopsList" class="space-y-2.5 overflow-y-auto flex-1 pr-1 text-sm"></ol>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
+        <h2 class="text-sm font-bold text-slate-900">Registro de actividad</h2>
+      </div>
+      <ul id="eventLog" class="space-y-1.5 text-xs text-slate-600 max-h-36 overflow-y-auto">
+        <li class="text-slate-400">Sin eventos emitidos en esta sesión.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const DEPOT = [-12.0298, -77.0285];
+
+    const map = L.map("map").setView([-12.033, -77.029], 14);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19,
+      attribution: "Tiles &copy; Esri"
+    }).addTo(map);
+    const routeLayer = L.layerGroup().addTo(map);
+    const markersByCode = new Map();
+    let emptiedCount = 0;
+
+    function renderDriverSession() {
+      const raw = localStorage.getItem("ecosystem_user");
+      if (!raw) return;
+      try {
+        const user = JSON.parse(raw);
+        document.getElementById("driverBadge").textContent = `${user.full_name} (${user.role})`;
+      } catch (e) {}
+    }
+
+    function showToast(text, isError = false) {
+      const el = document.getElementById("toastBanner");
+      el.textContent = text;
+      el.className = isError
+        ? "rounded-xl p-3 text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200"
+        : "rounded-xl p-3 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+    }
+
+    function appendEventLog(text) {
+      const logEl = document.getElementById("eventLog");
+      if (logEl.children.length === 1 && logEl.children[0].classList.contains("text-slate-400")) {
+        logEl.innerHTML = "";
+      }
+      const time = new Date().toLocaleTimeString("es-PE", { hour12: false });
+      const li = document.createElement("li");
+      li.className = "flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100";
+      li.innerHTML = `<span class="font-mono text-[11px] font-semibold text-emerald-700">${time}</span><span>${text}</span>`;
+      logEl.prepend(li);
+    }
+
+    function focusStop(code, lat, lon) {
+      map.flyTo([lat, lon], 16, { duration: 0.6 });
+      const marker = markersByCode.get(code);
+      if (marker) {
+        marker.openPopup();
+      }
+    }
+
+    function getAuthHeaders() {
+      const headers = {};
+      const raw = localStorage.getItem("ecosystem_user");
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          if (user.access_token) headers.Authorization = `Bearer ${user.access_token}`;
+        } catch (e) {}
+      }
+      return headers;
+    }
+
+    async function markEmptied(code) {
+      try {
+        const res = await fetch(`${BASE_URL}/api/v1/drop-and-go/containers/${encodeURIComponent(code)}/empty`, {
+          method: "POST",
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || `Error HTTP ${res.status}`);
+        }
+        emptiedCount += 1;
+        document.getElementById("kpiEmptied").textContent = emptiedCount;
+        showToast(data.message || `Contenedor ${code} marcado como vaciado.`);
+        appendEventLog(`Contenedor ${code} vaciado y solicitudes Drop & Go actualizadas.`);
+        await loadRoute(document.getElementById("modeSelect").value);
+      } catch (err) {
+        showToast(`No se pudo vaciar ${code}: ${err.message}`, true);
+      }
+    }
+
+    async function announceSector() {
+      const sector = document.getElementById("sectorSelect").value;
+      try {
+        const res = await fetch(`${BASE_URL}/api/v1/drop-and-go/sectors/${encodeURIComponent(sector)}/announce-arrival`, {
+          method: "POST"
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || `Error HTTP ${res.status}`);
+        }
+        showToast(data.message || `Alerta enviada al sector ${sector}.`);
+        appendEventLog(`Aviso enviado a vecinos del sector ${sector}.`);
+      } catch (err) {
+        showToast(`Error al anunciar llegada: ${err.message}`, true);
+      }
+    }
+
+    function createPopupContent(stop) {
+      const wrap = document.createElement("div");
+      wrap.className = "space-y-1.5 text-xs";
+
+      const title = document.createElement("p");
+      title.className = "font-bold text-slate-900";
+      title.textContent = `Parada #${stop.sequence_order}: ${stop.container_code}`;
+
+      const addr = document.createElement("p");
+      addr.className = "text-slate-600";
+      addr.textContent = stop.address;
+
+      const meta = document.createElement("p");
+      meta.className = "text-slate-500";
+      meta.textContent = `Tramo: +${stop.leg_distance_km} km · ETA: ${stop.estimated_arrival_min} min`;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "Marcar Vaciado";
+      btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1.5 px-2.5 rounded-lg mt-1";
+      btn.addEventListener("click", () => markEmptied(stop.container_code));
+
+      wrap.append(title, addr, meta, btn);
+      return wrap;
+    }
+
+    async function loadRoute(mode = "haversine") {
+      routeLayer.clearLayers();
+      markersByCode.clear();
+
+      try {
+        const res = await fetch(`${BASE_URL}/api/v1/routes/optimal-daily?mode=${encodeURIComponent(mode)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || `Error HTTP ${res.status}`);
+        }
+
+        const modeLabels = {
+          haversine: "Ruta más cercana",
+          road: "Red vial urbana",
+          two_opt: "Optimizada sin cruces"
+        };
+        document.getElementById("summary").innerText =
+          `${modeLabels[mode] || "Ruta activa"} · Salida: Cochera Municipal del Rímac`;
+        document.getElementById("kpiStops").textContent = data.total_stops;
+        document.getElementById("kpiDistance").textContent = `${data.total_distance_km} km`;
+        document.getElementById("kpiMinutes").textContent = `${data.estimated_total_minutes} min`;
+        document.getElementById("algoBadge").textContent = modeLabels[mode] || "Activa";
+
+        const depotIcon = L.divIcon({
+          className: "",
+          html: `<div class="depot-pin"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+        L.marker(DEPOT, { icon: depotIcon }).addTo(routeLayer).bindPopup("<b>Cochera Municipal del Rímac</b><br>Punto de partida (DEPOT)");
+
+        const listEl = document.getElementById("stopsList");
+        listEl.innerHTML = "";
+
+        if (!data.ordered_stops.length) {
+          listEl.innerHTML = `
+            <li class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-center space-y-2">
+              <p class="font-bold text-sm">Ruta del día completada</p>
+              <p class="text-xs">No hay contenedores en estado LLENO pendientes de recolección.</p>
+            </li>`;
+          map.setView(DEPOT, 14);
+          return;
+        }
+
+        const coords = [DEPOT];
+        data.ordered_stops.forEach((stop) => {
+          coords.push([stop.latitude, stop.longitude]);
+
+          const pinIcon = L.divIcon({
+            className: "",
+            html: `<div class="stop-pin">${stop.sequence_order}</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+
+          const marker = L.marker([stop.latitude, stop.longitude], { icon: pinIcon })
+            .addTo(routeLayer)
+            .bindPopup(createPopupContent(stop));
+          markersByCode.set(stop.container_code, marker);
+
+          const card = document.createElement("li");
+          card.className = "p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2";
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <span class="inline-block text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">#${stop.sequence_order}</span>
+                <span class="font-bold text-slate-900 ml-1">${stop.container_code}</span>
+                <p class="text-xs text-slate-500 mt-1">${stop.address}</p>
+              </div>
+              <div class="text-right shrink-0">
+                <p class="text-xs font-semibold text-slate-700">+${stop.leg_distance_km} km</p>
+                <p class="text-[11px] text-slate-400">${stop.estimated_arrival_min} min</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" class="locate-btn bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-semibold transition">
+                Ubicar en mapa
+              </button>
+              <button type="button" class="empty-btn bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded-lg text-xs font-semibold transition">
+                Marcar Vaciado
+              </button>
+            </div>`;
+
+          card.querySelector(".locate-btn").addEventListener("click", () => {
+            focusStop(stop.container_code, stop.latitude, stop.longitude);
+          });
+          card.querySelector(".empty-btn").addEventListener("click", () => {
+            markEmptied(stop.container_code);
+          });
+          listEl.appendChild(card);
+        });
+
+        L.polyline(coords, { color: "#0f172a", weight: 4, opacity: 0.9 }).addTo(routeLayer);
+        const last = coords[coords.length - 1];
+        L.polyline([last, DEPOT], { color: "#64748b", weight: 2.5, dashArray: "6, 8", opacity: 0.75 }).addTo(routeLayer);
+        map.fitBounds(coords, { padding: [36, 36], maxZoom: 15 });
+      } catch (err) {
+        showToast(`Error al cargar la ruta TSP: ${err.message}`, true);
+      }
+    }
+
+    document.getElementById("modeSelect").addEventListener("change", (e) => loadRoute(e.target.value));
+    document.getElementById("refreshRouteBtn").addEventListener("click", () => {
+      loadRoute(document.getElementById("modeSelect").value);
+    });
+    document.getElementById("announceBtn").addEventListener("click", announceSector);
+
+    renderDriverSession();
     loadRoute();
   </script>
+  <script src="assets/eco-shell.js"></script>
 </body>
 </html>

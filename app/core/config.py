@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     MUNICIPAL_DEPOT_LAT: float = -12.0298
     MUNICIPAL_DEPOT_LON: float = -77.0285
     OPENROUTESERVICE_API_KEY: str = "demo_key_protected_by_adapter"
+    JWT_SECRET_KEY: str = "ecosystem_rimac_jwt_secret_2026"
+    JWT_EXPIRE_MINUTES: int = 480
 
     class Config:
         env_file = ".env"

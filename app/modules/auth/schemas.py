@@ -7,7 +7,7 @@ class CitizenRegisterInput(BaseModel):
     full_name: str
     email: EmailStr
     password: str
-    zone_sector: str = "Rimac Centro"
+    zone_sector: str = "Rímac Centro"
 
 
 class LoginInput(BaseModel):
@@ -28,3 +28,5 @@ class LoginOutput(BaseModel):
     full_name: str
     role: UserRole
     eco_points: int
+    access_token: str = ""
+    token_type: str = "bearer"

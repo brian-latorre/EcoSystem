@@ -7,6 +7,7 @@
   <title>EcoSystem - Mapa Ciudadano</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
 
   <link
     rel="stylesheet"
@@ -30,26 +31,18 @@
 
   <main class="max-w-6xl mx-auto space-y-6">
 
-    <!-- Encabezado -->
-    <header class="bg-white rounded-2xl shadow-md border border-slate-100 p-6 text-center">
-      <span class="text-xs font-bold tracking-wider text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full">
-        Gestión Ambiental Ciudadana
-      </span>
-
-      <h1 class="text-3xl font-extrabold text-slate-900 mt-3">
-        EcoSystem
-      </h1>
-
-      <p class="text-xs text-slate-500 mt-1">
-        Recicla hoy, mejora mañana
-      </p>
-
-      <h2 class="text-lg font-bold mt-4">
-        Mapa de Contenedores del Rímac
-      </h2>
+    <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold tracking-wider text-emerald-700 uppercase bg-emerald-50 px-2.5 py-0.5 rounded-full">
+            Gestión Ambiental Ciudadana
+          </span>
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Mapa de Contenedores del Rímac</h1>
+        <p class="text-xs text-slate-500 mt-0.5">Reporta contenedores llenos y registra tus bolsas Drop &amp; Go</p>
+      </div>
     </header>
 
-    <!-- Indicadores -->
     <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
       <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-100 text-center">
@@ -69,7 +62,6 @@
 
     </section>
 
-    <!-- Mapa -->
     <section class="bg-white rounded-2xl shadow-md border border-slate-100 p-5">
 
       <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
@@ -85,16 +77,21 @@
         </button>
       </div>
 
-      <div class="flex flex-wrap gap-4 text-sm text-slate-600 mb-4">
-        <span>🟢 Disponible</span>
-        <span>🔴 Lleno</span>
-        <span>Los contenedores inactivos están ocultos</span>
+      <div class="flex flex-wrap items-center gap-5 text-sm text-slate-600 mb-4">
+        <span class="inline-flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-600 inline-block"></span>
+          Disponible
+        </span>
+        <span class="inline-flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-rose-600 inline-block"></span>
+          Lleno
+        </span>
+        <span class="text-slate-500">Contenedores inactivos ocultos</span>
       </div>
 
       <div id="map"></div>
     </section>
 
-    <!-- Formulario de reporte -->
     <section class="bg-white rounded-2xl shadow-md border border-slate-100 p-6 space-y-4">
 
       <h2 class="text-lg font-bold text-slate-900 border-b pb-3">
@@ -151,7 +148,7 @@
         class="hidden rounded-xl p-3 text-sm font-medium"
       ></div>
     </section>
-<!-- Registro Drop & Go -->
+    
 <section class="bg-white rounded-2xl shadow-md border
   border-slate-100 p-6 space-y-4">
 
@@ -254,6 +251,23 @@
       Introduce tu ID de ciudadano para consultar las bolsas.
     </div>
   </div>
+
+  <div class="pt-4 border-t border-slate-100">
+    <div class="flex items-center justify-between gap-2">
+      <h3 class="font-bold text-slate-800">
+        Alertas de recolección
+      </h3>
+      <button id="refreshNotifications" type="button"
+        class="text-sm font-semibold text-emerald-700">
+        Actualizar
+      </button>
+    </div>
+
+    <div id="notificationList"
+      class="space-y-2 mt-3 text-sm text-slate-600">
+      Sin notificaciones recientes.
+    </div>
+  </div>
 </section>
 
     <footer class="text-center text-xs text-slate-400 pb-4">
@@ -262,16 +276,17 @@
   </main>
 
   <script>
-    const API = "/api/v1/containers";
-    const DROP_GO_API = "/api/v1/drop-and-go";
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const API = `${BASE_URL}/api/v1/containers`;
+    const DROP_GO_API = `${BASE_URL}/api/v1/drop-and-go`;
 
     const map = L.map("map").setView([-12.033, -77.029], 14);
 
     L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
       {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
+        attribution: "Tiles &copy; Esri"
       }
     ).addTo(map);
 
@@ -314,9 +329,16 @@
         );
 
         markerLayer.clearLayers();
-        selectedContainer = null;
-        containerInput.value = "";
-        document.getElementById("dropContainer").value = "";
+        const prevId = selectedContainer ? selectedContainer.id : null;
+        const retained = prevId ? active.find(c => c.id === prevId) : null;
+        selectedContainer = retained || null;
+        if (retained) {
+          containerInput.value = `${retained.id} - ${retained.name}`;
+          document.getElementById("dropContainer").value = `${retained.code} - ${retained.name}`;
+        } else {
+          containerInput.value = "";
+          document.getElementById("dropContainer").value = "";
+        }
 
         document.getElementById("total").textContent = active.length;
         document.getElementById("available").textContent =
@@ -463,7 +485,8 @@
 
     document.getElementById("refreshButton")
       .addEventListener("click", loadContainers);
-
+    
+        
     const dropGoForm = document.getElementById("dropGoForm");
     const dropGoButton = document.getElementById("dropGoButton");
 
@@ -601,12 +624,70 @@
       }
     }
 
+    async function loadCitizenNotifications() {
+      const list = document.getElementById("notificationList");
+      const citizenId = Number(document.getElementById("citizenId").value);
+      if (!Number.isSafeInteger(citizenId) || citizenId <= 0) {
+        list.textContent = "Introduce tu ID de ciudadano para ver tus alertas.";
+        return;
+      }
+      list.textContent = "Consultando alertas...";
+      try {
+        const response = await fetch(`${DROP_GO_API}/notifications/${citizenId}`);
+        if (!response.ok) {
+          throw new Error(`Error HTTP ${response.status}`);
+        }
+        const items = await response.json();
+        list.replaceChildren();
+        if (items.length === 0) {
+          list.textContent = "No tienes alertas de recolección por ahora.";
+          return;
+        }
+        for (const item of items) {
+          const card = document.createElement("div");
+          card.className = "bg-emerald-50 border border-emerald-200 rounded-xl p-3";
+          const head = document.createElement("div");
+          head.className = "flex items-center justify-between gap-2";
+          const title = document.createElement("p");
+          title.className = "font-bold text-emerald-900";
+          title.textContent = item.title;
+          const channel = document.createElement("span");
+          channel.className = "text-xs font-semibold text-emerald-700";
+          channel.textContent = item.channel === "IN_APP+WEB_PUSH+EMAIL_AUDIT"
+            ? "Portal · Web · Correo"
+            : item.channel;
+          head.append(title, channel);
+          const msg = document.createElement("p");
+          msg.className = "text-slate-700 mt-1";
+          msg.textContent = item.message;
+          card.append(head, msg);
+          list.appendChild(card);
+        }
+      } catch (error) {
+        list.textContent = `Error al consultar alertas: ${error.message}`;
+      }
+    }
+
     dropGoForm.addEventListener("submit", registerDropGo);
 
-      document.getElementById("refreshPackages")
-        .addEventListener("click", loadCitizenPackages);
+    document.getElementById("refreshPackages")
+      .addEventListener("click", loadCitizenPackages);
+    document.getElementById("refreshNotifications")
+      .addEventListener("click", loadCitizenNotifications);
+
+    try {
+      const savedUser = JSON.parse(localStorage.getItem("ecosystem_user") || "null");
+      if (savedUser && savedUser.user_id) {
+        const citizenInput = document.getElementById("citizenId");
+        citizenInput.value = savedUser.user_id;
+        citizenInput.readOnly = true;
+        loadCitizenPackages();
+        loadCitizenNotifications();
+      }
+    } catch (e) {}
 
     loadContainers();
   </script>
+  <script src="assets/eco-shell.js"></script>
 </body>
 </html>

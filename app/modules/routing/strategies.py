@@ -59,41 +59,36 @@ class IRoutingStrategy(ABC):
         pass
 
 
-def _solve_circuit(
+def _build_route_plan(
     depot: GeoNode,
-    stops: List[GeoNode],
+    ordered_nodes: List[GeoNode],
     distance_metric: Callable[[GeoNode, GeoNode], float],
     algorithm: str,
     speed: float,
 ) -> RoutePlan:
-    if not stops:
+    if not ordered_nodes:
         return RoutePlan(algorithm, 0, 0.0, 0.0, [])
 
-    unvisited = list(stops)
     ordered_stops: List[RouteStop] = []
     current = depot
     total_km = 0.0
-    step = 1
 
-    while unvisited:
-        nearest = min(unvisited, key=lambda node: distance_metric(current, node))
-        leg_km = distance_metric(current, nearest)
+    for step, node in enumerate(ordered_nodes, start=1):
+        leg_km = distance_metric(current, node)
         total_km += leg_km
         ordered_stops.append(
             RouteStop(
                 step,
-                nearest.container_id,
-                nearest.code,
-                nearest.address,
-                nearest.latitude,
-                nearest.longitude,
+                node.container_id,
+                node.code,
+                node.address,
+                node.latitude,
+                node.longitude,
                 round(leg_km, 2),
                 round((total_km / speed) * 60, 1),
             )
         )
-        current = nearest
-        unvisited.remove(nearest)
-        step += 1
+        current = node
 
     return RoutePlan(
         algorithm,
@@ -102,6 +97,35 @@ def _solve_circuit(
         round((total_km / speed) * 60, 1),
         ordered_stops,
     )
+
+
+def _nearest_neighbor_order(
+    depot: GeoNode,
+    stops: List[GeoNode],
+    distance_metric: Callable[[GeoNode, GeoNode], float],
+) -> List[GeoNode]:
+    unvisited = list(stops)
+    ordered: List[GeoNode] = []
+    current = depot
+
+    while unvisited:
+        nearest = min(unvisited, key=lambda node: distance_metric(current, node))
+        ordered.append(nearest)
+        current = nearest
+        unvisited.remove(nearest)
+
+    return ordered
+
+
+def _solve_circuit(
+    depot: GeoNode,
+    stops: List[GeoNode],
+    distance_metric: Callable[[GeoNode, GeoNode], float],
+    algorithm: str,
+    speed: float,
+) -> RoutePlan:
+    ordered_nodes = _nearest_neighbor_order(depot, stops, distance_metric)
+    return _build_route_plan(depot, ordered_nodes, distance_metric, algorithm, speed)
 
 
 class NearestNeighborTSPStrategy(IRoutingStrategy):
@@ -123,6 +147,39 @@ class NearestNeighborTSPStrategy(IRoutingStrategy):
         return _solve_circuit(
             depot, stops, self._distance, "NearestNeighborTSPStrategy", self.speed_kmh
         )
+
+
+class TwoOptTSPStrategy(IRoutingStrategy):
+    speed_kmh: float = 22.0
+
+    def _path_distance(self, depot: GeoNode, route: List[GeoNode]) -> float:
+        if not route:
+            return 0.0
+        total = NearestNeighborTSPStrategy._distance(depot, route[0])
+        for idx in range(len(route) - 1):
+            total += NearestNeighborTSPStrategy._distance(route[idx], route[idx + 1])
+        return total
+
+    def calculate_route(self, depot: GeoNode, stops: List[GeoNode]) -> RoutePlan:
+        metric = NearestNeighborTSPStrategy._distance
+        best = _nearest_neighbor_order(depot, stops, metric)
+        if len(best) < 3:
+            return _build_route_plan(depot, best, metric, "TwoOptTSPStrategy", self.speed_kmh)
+
+        best_dist = self._path_distance(depot, best)
+        improved = True
+        while improved:
+            improved = False
+            for i in range(len(best) - 1):
+                for j in range(i + 1, len(best)):
+                    candidate = best[:i] + best[i : j + 1][::-1] + best[j + 1 :]
+                    cand_dist = self._path_distance(depot, candidate)
+                    if cand_dist + 1e-6 < best_dist:
+                        best = candidate
+                        best_dist = cand_dist
+                        improved = True
+
+        return _build_route_plan(depot, best, metric, "TwoOptTSPStrategy", self.speed_kmh)
 
 
 class RoadNetworkAdapterTSPStrategy(IRoutingStrategy):

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,6 +10,7 @@ from app.modules.auth.schemas import (
     LoginInput,
     LoginOutput,
 )
+from app.modules.auth.security import decode_access_token
 from app.modules.auth.service import (
     AuthService,
     EmailAlreadyRegisteredError,
@@ -61,3 +63,25 @@ def login_by_role(
                 f"{error.expected_role.value}"
             ),
         )
+
+
+@router.get("/me")
+def get_authenticated_session(authorization: Optional[str] = Header(default=None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token Bearer requerido",
+        )
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        claims = decode_access_token(token)
+        return {
+            "user_id": int(claims["sub"]),
+            "email": claims["email"],
+            "role": claims["role"],
+        }
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc

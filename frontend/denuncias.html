@@ -7,6 +7,7 @@
   <title>EcoSystem - Denuncias Ambientales</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
   <link rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
@@ -25,23 +26,21 @@
 
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
-  <header class="bg-white border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-5 py-5">
-      <span class="text-xs font-bold tracking-wider
-        text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
-        FISCALIZACIÓN AMBIENTAL
-      </span>
-      <h1 class="text-3xl font-extrabold mt-3">EcoSystem</h1>
-      <p class="text-sm text-slate-500 mt-1">
-        Reporte ciudadano de basura abandonada — Rímac
-      </p>
-    </div>
-  </header>
+  <main class="space-y-6">
+    <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold tracking-wider text-emerald-700 uppercase bg-emerald-50 px-2.5 py-0.5 rounded-full">
+            Fiscalización Ambiental
+          </span>
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Denuncias de Basura en Tiempo Real</h1>
+        <p class="text-xs text-slate-500 mt-0.5">Reporte ciudadano de residuos abandonados con GPS y evidencia fotográfica — Rímac</p>
+      </div>
+    </header>
 
-  <main class="max-w-7xl mx-auto p-4 md:p-6">
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-      <!-- Formulario de denuncias -->
       <section class="lg:col-span-2 bg-white rounded-2xl
         shadow-sm border border-slate-200 p-5 md:p-6">
 
@@ -58,7 +57,7 @@
           <div>
             <label for="citizenId"
               class="block text-xs font-bold mb-1">
-              ID del ciudadano (demostración)
+              ID de cuenta
             </label>
             <input id="citizenId" type="number" min="1"
               value="1" required
@@ -147,7 +146,6 @@
         </div>
       </section>
 
-      <!-- Mapa de denuncias -->
       <section class="lg:col-span-3 bg-white rounded-2xl
         shadow-sm border border-slate-200 overflow-hidden">
 
@@ -189,7 +187,8 @@
   <script>
     "use strict";
 
-    const API = "/api/v1/waste-reports";
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const API = `${BASE_URL}/api/v1/waste-reports`;
 
     const latInput = document.getElementById("lat");
     const lonInput = document.getElementById("lon");
@@ -210,8 +209,7 @@
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
       {
         maxZoom: 19,
-        attribution:
-          "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom"
+        attribution: "Tiles &copy; Esri"
       }
     ).addTo(map);
 
@@ -419,7 +417,6 @@
     latInput.addEventListener("change", updateFromInputs);
     lonInput.addEventListener("change", updateFromInputs);
 
-    // Redimensionar imagen y convertir a JPEG/Base64.
     function compressImage(file) {
       return new Promise((resolve, reject) => {
         if (!file.type.startsWith("image/")) {
@@ -499,7 +496,6 @@
       }
     });
 
-    // Imagen identificada como placeholder, si no se adjunta foto.
     function defaultImageDataUrl() {
       const canvas = document.createElement("canvas");
       canvas.width = 600;
@@ -517,8 +513,6 @@
     }
 
     function createPopup(report) {
-      // Construcción con textContent para evitar insertar HTML
-      // proporcionado por usuarios directamente en el DOM.
       const wrapper = document.createElement("div");
 
       const title = document.createElement("strong");
@@ -692,11 +686,19 @@
       }
     });
 
-    // Posición inicial para demostraciones sin GPS.
+    try {
+      const savedUser = JSON.parse(localStorage.getItem("ecosystem_user") || "null");
+      if (savedUser && savedUser.user_id) {
+        const citizenInput = document.getElementById("citizenId");
+        citizenInput.value = savedUser.user_id;
+        citizenInput.readOnly = true;
+      }
+    } catch (e) {}
+
     setLocation(-12.0251, -77.0312);
 
-    // Consultar las denuncias existentes al abrir la página.
     loadReports();
   </script>
+  <script src="assets/eco-shell.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ from app.modules.auth.schemas import (
     LoginInput,
     LoginOutput,
 )
-from app.modules.auth.security import hash_password
+from app.modules.auth.security import create_access_token, hash_password
 
 
 class EmailAlreadyRegisteredError(Exception):
@@ -64,4 +64,6 @@ class AuthService:
             full_name=user.full_name,
             role=user_role,
             eco_points=user.eco_points_balance,
+            access_token=create_access_token(user.id, user_role.value, user.email),
+            token_type="bearer",
         )

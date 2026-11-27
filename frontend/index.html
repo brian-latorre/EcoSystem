@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoSystem - Reciclaje Urbano Rímac</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex items-center justify-center p-4 md:p-8">
+  <main class="w-full max-w-4xl space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      <section class="space-y-4">
+        <div class="inline-flex items-center gap-2 text-emerald-700">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"></path>
+            <path d="M5 19c2-4 5-7 9-9"></path>
+          </svg>
+          <span class="text-xs font-bold tracking-wider uppercase">Municipalidad Distrital del Rímac</span>
+        </div>
+        <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">EcoSystem</h1>
+        <p class="text-sm text-slate-600 leading-relaxed">
+          Plataforma vecinal de reciclaje y fiscalización ambiental para el distrito del Rímac.
+        </p>
+        <ul class="space-y-2 text-sm text-slate-600">
+          <li class="flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+            Consulta puntos de reciclaje y disponibilidad en el mapa.
+          </li>
+          <li class="flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+            Registra bolsas Drop &amp; Go y recibe alertas de recolección.
+          </li>
+          <li class="flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+            Reporta puntos críticos de residuos en la vía pública.
+          </li>
+        </ul>
+      </section>
+
+      <section class="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
+        <div class="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
+          <button id="tabLogin" type="button" class="py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-sm transition">
+            Iniciar sesión
+          </button>
+          <button id="tabRegister" type="button" class="py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition">
+            Crear cuenta
+          </button>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label for="loginEmail" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Correo electrónico</label>
+            <input id="loginEmail" type="email" required placeholder="tu.correo@gmail.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+          </div>
+          <div>
+            <label for="loginPassword" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contraseña</label>
+            <input id="loginPassword" type="password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+          </div>
+          <button id="loginSubmitBtn" type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-sm transition">
+            Ingresar
+          </button>
+        </form>
+
+        <form id="registerForm" class="hidden space-y-4">
+          <div>
+            <label for="regName" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nombre completo</label>
+            <input id="regName" type="text" required placeholder="Juan Perez" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+          </div>
+          <div>
+            <label for="regEmail" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Correo electrónico</label>
+            <input id="regEmail" type="email" required placeholder="juan.perez@gmail.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="regPassword" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contraseña</label>
+              <input id="regPassword" type="password" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+            </div>
+            <div>
+              <label for="regSector" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Sector del Rímac</label>
+              <select id="regSector" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+                <option value="Rímac Centro">Rímac Centro</option>
+                <option value="Alameda de los Descalzos">Alameda de los Descalzos</option>
+                <option value="Av. Alcázar">Av. Alcázar</option>
+                <option value="Caquetá">Caquetá</option>
+              </select>
+            </div>
+          </div>
+          <button id="regSubmitBtn" type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm transition">
+            Crear cuenta vecinal
+          </button>
+        </form>
+
+        <div id="authMsg" class="hidden p-3 rounded-xl text-sm font-medium"></div>
+      </section>
+    </div>
+
+    <footer class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-2">
+      <span>Municipalidad Distrital del Rímac · Servicio Vecinal</span>
+      <a href="acceso-personal.html" class="font-semibold text-slate-600 hover:text-emerald-700 transition">
+        Acceso para personal municipal
+      </a>
+    </footer>
+  </main>
+
+  <script>
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const AUTH_API = `${BASE_URL}/api/v1/auth`;
+    const ROLE_HOME = {
+      CIUDADANO: "ciudadano.html",
+      CONDUCTOR: "conductor.html",
+      OPERARIO: "operario.html",
+      ADMIN: "admin.html",
+      COORDINADOR: "admin.html",
+      SUPERVISOR: "admin.html"
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem("ecosystem_user") || "null");
+      if (existing && existing.access_token && ROLE_HOME[existing.role]) {
+        window.location.replace(ROLE_HOME[existing.role]);
+      }
+    } catch (e) {}
+
+    const tabLogin = document.getElementById("tabLogin");
+    const tabRegister = document.getElementById("tabRegister");
+    const loginForm = document.getElementById("loginForm");
+    const registerForm = document.getElementById("registerForm");
+    const authMsg = document.getElementById("authMsg");
+
+    function showMsg(text, isError = false) {
+      authMsg.textContent = text;
+      authMsg.className = isError
+        ? "p-3 rounded-xl text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200"
+        : "p-3 rounded-xl text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+    }
+
+    function switchTab(mode) {
+      const isLogin = mode === "login";
+      loginForm.classList.toggle("hidden", !isLogin);
+      registerForm.classList.toggle("hidden", isLogin);
+      tabLogin.className = isLogin
+        ? "py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-sm transition"
+        : "py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition";
+      tabRegister.className = !isLogin
+        ? "py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-sm transition"
+        : "py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition";
+      authMsg.className = "hidden";
+    }
+
+    tabLogin.addEventListener("click", () => switchTab("login"));
+    tabRegister.addEventListener("click", () => switchTab("register"));
+
+    const nextPage = new URLSearchParams(window.location.search).get("next");
+    if (nextPage && (nextPage === "ciudadano.html" || nextPage === "denuncias.html")) {
+      showMsg("Inicia sesión con tu cuenta vecinal para continuar.", true);
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("loginSubmitBtn");
+      btn.disabled = true;
+      btn.textContent = "Ingresando...";
+      try {
+        const res = await fetch(`${AUTH_API}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("loginEmail").value,
+            password: document.getElementById("loginPassword").value,
+            expected_role: "CIUDADANO"
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || `Error HTTP ${res.status}`);
+        }
+        localStorage.setItem("ecosystem_user", JSON.stringify(data));
+        if (nextPage === "ciudadano.html" || nextPage === "denuncias.html") {
+          window.location.href = nextPage;
+          return;
+        }
+        window.location.href = "ciudadano.html";
+      } catch (err) {
+        showMsg(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Ingresar";
+      }
+    });
+
+    registerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("regSubmitBtn");
+      btn.disabled = true;
+      btn.textContent = "Registrando...";
+      const email = document.getElementById("regEmail").value;
+      try {
+        const res = await fetch(`${AUTH_API}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: document.getElementById("regName").value,
+            email: email,
+            password: document.getElementById("regPassword").value,
+            zone_sector: document.getElementById("regSector").value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || `Error HTTP ${res.status}`);
+        }
+        e.target.reset();
+        switchTab("login");
+        document.getElementById("loginEmail").value = email;
+        showMsg(`Cuenta creada correctamente. Ya puedes ingresar con ${email}.`);
+      } catch (err) {
+        showMsg(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Crear cuenta vecinal";
+      }
+    });
+  </script>
+</body>
+</html>
