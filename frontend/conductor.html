@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EcoSystem - Ruta Óptima del Conductor (TSP)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -42,31 +43,24 @@
 <body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-6">
   <main class="max-w-6xl mx-auto space-y-5">
     <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div class="flex items-start gap-3">
-        <a href="index.html" class="mt-1 inline-flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Volver al Portal">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </a>
-        <div>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs font-bold tracking-wider text-blue-700 uppercase bg-blue-50 px-2.5 py-0.5 rounded-full">
-              Módulo Logístico TSP
-            </span>
-            <span id="driverBadge" class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
-              Conductor en Turno
-            </span>
-          </div>
-          <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Hoja de Ruta Diaria — Rímac</h1>
-          <p id="summary" class="text-xs text-slate-500 mt-0.5">Calculando circuito óptimo...</p>
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-bold tracking-wider text-emerald-700 uppercase bg-emerald-50 px-2.5 py-0.5 rounded-full">
+            Logística de Recolección
+          </span>
+          <span id="driverBadge" class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+            Conductor en Turno
+          </span>
         </div>
+        <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Hoja de Ruta Diaria — Rímac</h1>
+        <p id="summary" class="text-xs text-slate-500 mt-0.5">Calculando circuito de recolección...</p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5">
         <select id="modeSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-          <option value="haversine">Strategy 1: Nearest Neighbor (Haversine)</option>
-          <option value="road">Strategy 2: Red Vial (Adapter ORS)</option>
-          <option value="two_opt">Strategy 3: Optimización 2-Opt (Sin cruces)</option>
+          <option value="haversine">Ruta más cercana</option>
+          <option value="road">Red vial urbana</option>
+          <option value="two_opt">Ruta optimizada sin cruces</option>
         </select>
         <button id="refreshRouteBtn" type="button" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -74,9 +68,6 @@
           </svg>
           Recalcular
         </button>
-        <a id="docsLink" href="/docs" target="_blank" class="inline-flex items-center gap-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition">
-          API /docs
-        </a>
       </div>
     </header>
 
@@ -101,13 +92,12 @@
 
     <section class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
-        <h2 class="text-sm font-bold text-slate-900">Notificar Proximidad por Sector (Patrón Observer)</h2>
+        <h2 class="text-sm font-bold text-slate-900">Notificar llegada al sector</h2>
         <p class="text-xs text-slate-500">Emite alertas automáticas a vecinos con bolsas Drop &amp; Go registradas en el sector.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <select id="sectorSelect" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-700">
           <option value="Rímac Centro">Rímac Centro</option>
-          <option value="Rimac Centro">Rimac Centro</option>
           <option value="Alameda de los Descalzos">Alameda de los Descalzos</option>
           <option value="Av. Alcázar">Av. Alcázar</option>
           <option value="Caquetá">Caquetá</option>
@@ -131,7 +121,7 @@
       <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col h-[484px]">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
           <h2 class="text-sm font-bold text-slate-900">Secuencia de Paradas</h2>
-          <span id="algoBadge" class="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">TSP</span>
+          <span id="algoBadge" class="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Ruta</span>
         </div>
         <ol id="stopsList" class="space-y-2.5 overflow-y-auto flex-1 pr-1 text-sm"></ol>
       </div>
@@ -139,8 +129,7 @@
 
     <section class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
-        <h2 class="text-sm font-bold text-slate-900">Bitácora de Eventos Observer en Vivo</h2>
-        <span class="text-[11px] text-slate-400">CollectionEventSubject.notify()</span>
+        <h2 class="text-sm font-bold text-slate-900">Registro de actividad</h2>
       </div>
       <ul id="eventLog" class="space-y-1.5 text-xs text-slate-600 max-h-36 overflow-y-auto">
         <li class="text-slate-400">Sin eventos emitidos en esta sesión.</li>
@@ -151,7 +140,6 @@
   <script>
     const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
     const DEPOT = [-12.0298, -77.0285];
-    document.getElementById("docsLink").href = `${BASE_URL}/docs`;
 
     const map = L.map("map").setView([-12.033, -77.029], 14);
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
@@ -224,7 +212,7 @@
         emptiedCount += 1;
         document.getElementById("kpiEmptied").textContent = emptiedCount;
         showToast(data.message || `Contenedor ${code} marcado como vaciado.`);
-        appendEventLog(`CONTAINER_EMPTIED (${code}) -> PostGIS reiniciado a DISPONIBLE y solicitudes Drop & Go actualizadas.`);
+        appendEventLog(`Contenedor ${code} vaciado y solicitudes Drop & Go actualizadas.`);
         await loadRoute(document.getElementById("modeSelect").value);
       } catch (err) {
         showToast(`No se pudo vaciar ${code}: ${err.message}`, true);
@@ -242,7 +230,7 @@
           throw new Error(data.detail || `Error HTTP ${res.status}`);
         }
         showToast(data.message || `Alerta enviada al sector ${sector}.`);
-        appendEventLog(`TRUCK_ARRIVING_SECTOR (${sector}) -> CitizenSectorAlertObserver ejecutado.`);
+        appendEventLog(`Aviso enviado a vecinos del sector ${sector}.`);
       } catch (err) {
         showToast(`Error al anunciar llegada: ${err.message}`, true);
       }
@@ -285,12 +273,17 @@
           throw new Error(data.detail || `Error HTTP ${res.status}`);
         }
 
+        const modeLabels = {
+          haversine: "Ruta más cercana",
+          road: "Red vial urbana",
+          two_opt: "Optimizada sin cruces"
+        };
         document.getElementById("summary").innerText =
-          `Estrategia activa: ${data.algorithm} · Salida: Cochera Municipal del Rímac`;
+          `${modeLabels[mode] || "Ruta activa"} · Salida: Cochera Municipal del Rímac`;
         document.getElementById("kpiStops").textContent = data.total_stops;
         document.getElementById("kpiDistance").textContent = `${data.total_distance_km} km`;
         document.getElementById("kpiMinutes").textContent = `${data.estimated_total_minutes} min`;
-        document.getElementById("algoBadge").textContent = data.algorithm.replace("TSPStrategy", "");
+        document.getElementById("algoBadge").textContent = modeLabels[mode] || "Activa";
 
         const depotIcon = L.divIcon({
           className: "",
@@ -379,5 +372,6 @@
     renderDriverSession();
     loadRoute();
   </script>
+  <script src="assets/eco-shell.js"></script>
 </body>
 </html>

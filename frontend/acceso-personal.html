@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoSystem - Acceso para Personal Municipal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/eco-shell.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex items-center justify-center p-4 md:p-8">
+  <main class="w-full max-w-md space-y-5">
+    <div class="text-center space-y-1">
+      <div class="inline-flex items-center gap-2 text-emerald-700 justify-center">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"></path>
+          <path d="M5 19c2-4 5-7 9-9"></path>
+        </svg>
+        <span class="text-xs font-bold uppercase tracking-wider">EcoSystem Operaciones</span>
+      </div>
+      <h1 class="text-2xl font-extrabold text-slate-900">Acceso para Personal Municipal</h1>
+      <p class="text-xs text-slate-500">Conductores, operarios de planta y administración del Rímac</p>
+    </div>
+
+    <section class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+      <form id="staffLoginForm" class="space-y-4">
+        <div>
+          <label for="staffEmail" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Correo operativo</label>
+          <input id="staffEmail" type="email" required placeholder="conductor@gmail.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+        </div>
+        <div>
+          <label for="staffPassword" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contraseña</label>
+          <input id="staffPassword" type="password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+        </div>
+        <div>
+          <label for="staffRole" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Rol asignado</label>
+          <select id="staffRole" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+            <option value="CONDUCTOR">Conductor</option>
+            <option value="OPERARIO">Operario de planta</option>
+            <option value="COORDINADOR">Coordinador ambiental</option>
+            <option value="SUPERVISOR">Supervisor</option>
+            <option value="ADMIN">Administrador municipal</option>
+          </select>
+        </div>
+        <button id="staffSubmitBtn" type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm transition">
+          Ingresar al panel
+        </button>
+      </form>
+
+      <div id="staffMsg" class="hidden p-3 rounded-xl text-sm font-medium"></div>
+    </section>
+
+    <div class="text-center">
+      <a href="index.html" class="text-xs font-semibold text-slate-500 hover:text-emerald-700 transition">
+        Volver al acceso ciudadano
+      </a>
+    </div>
+  </main>
+
+  <script>
+    const BASE_URL = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+    const AUTH_API = `${BASE_URL}/api/v1/auth`;
+    const ROLE_HOME = {
+      CIUDADANO: "ciudadano.html",
+      CONDUCTOR: "conductor.html",
+      OPERARIO: "operario.html",
+      ADMIN: "admin.html",
+      COORDINADOR: "admin.html",
+      SUPERVISOR: "admin.html"
+    };
+    const STAFF_ALLOWED = {
+      CONDUCTOR: ["conductor.html"],
+      OPERARIO: ["operario.html"],
+      ADMIN: ["admin.html", "conductor.html", "operario.html", "denuncias.html"],
+      COORDINADOR: ["admin.html", "conductor.html", "operario.html", "denuncias.html"],
+      SUPERVISOR: ["admin.html", "conductor.html", "operario.html", "denuncias.html"]
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem("ecosystem_user") || "null");
+      if (existing && existing.access_token && ROLE_HOME[existing.role]) {
+        window.location.replace(ROLE_HOME[existing.role]);
+      }
+    } catch (e) {}
+
+    const staffMsg = document.getElementById("staffMsg");
+    function showStaffMsg(text, isError = false) {
+      staffMsg.textContent = text;
+      staffMsg.className = isError
+        ? "p-3 rounded-xl text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200"
+        : "p-3 rounded-xl text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+    }
+
+    const nextPage = new URLSearchParams(window.location.search).get("next");
+    if (nextPage && /^[a-z0-9_-]+\.html$/i.test(nextPage)) {
+      showStaffMsg("Inicia sesión con tu cuenta de personal para continuar.", true);
+    }
+
+    document.getElementById("staffLoginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("staffSubmitBtn");
+      btn.disabled = true;
+      btn.textContent = "Verificando...";
+      try {
+        const res = await fetch(`${AUTH_API}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("staffEmail").value,
+            password: document.getElementById("staffPassword").value,
+            expected_role: document.getElementById("staffRole").value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || `Error HTTP ${res.status}`);
+        }
+        localStorage.setItem("ecosystem_user", JSON.stringify(data));
+        const allowed = STAFF_ALLOWED[data.role] || [];
+        if (nextPage && allowed.includes(nextPage)) {
+          window.location.href = nextPage;
+          return;
+        }
+        window.location.href = ROLE_HOME[data.role] || "admin.html";
+      } catch (err) {
+        showStaffMsg(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Ingresar al panel";
+      }
+    });
+  </script>
+</body>
+</html>
