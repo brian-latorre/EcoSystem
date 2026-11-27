@@ -230,3 +230,25 @@ def test_resolved_report_not_pending(client, sample_report):
     ]
 
     assert report_id not in pending_ids
+
+# TEST 5: Rechazar denuncias fuera del Rimac
+def test_reject_waste_report_outside_rimac(
+    client,
+    sample_report
+):
+    payload = sample_report.copy()
+
+    payload["latitude"] = -12.1200
+    payload["longitude"] = -77.0300
+
+    response = client.post(
+        "/api/v1/waste-reports/",
+        json=payload
+    )
+
+    assert response.status_code == 422, response.text
+
+    data = response.json()
+
+    assert "detail" in data
+    assert "dentro del" in data["detail"]
