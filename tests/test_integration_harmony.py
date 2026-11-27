@@ -57,6 +57,7 @@ def test_all_module_routes_and_static_portal_are_mounted():
         "/api/v1/containers/flyweight-specs",
         "/api/v1/routes/optimal-daily",
         "/api/v1/drop-and-go/requests",
+        "/api/v1/drop-and-go/notifications/{citizen_id}",
         "/api/v1/governance/staff",
         "/api/v1/waste-reports/pending",
         "/api/v1/waste-reports/{report_id}/resolve",
@@ -68,6 +69,7 @@ def test_all_module_routes_and_static_portal_are_mounted():
 
     for page in (
         "/app/index.html",
+        "/app/acceso-personal.html",
         "/app/ciudadano.html",
         "/app/conductor.html",
         "/app/operario.html",
