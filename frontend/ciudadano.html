@@ -151,6 +151,110 @@
         class="hidden rounded-xl p-3 text-sm font-medium"
       ></div>
     </section>
+<!-- Registro Drop & Go -->
+<section class="bg-white rounded-2xl shadow-md border
+  border-slate-100 p-6 space-y-4">
+
+  <div class="border-b pb-3">
+    <h2 class="text-lg font-bold text-slate-900">
+      Registrar Bolsa Drop & Go
+    </h2>
+    <p class="text-sm text-slate-500 mt-2">
+      Registra una bolsa de reciclaje y recibe
+      un código único de seguimiento.
+    </p>
+  </div>
+
+  <form id="dropGoForm" class="space-y-4">
+
+    <div>
+      <label for="dropContainer"
+        class="block text-xs font-semibold text-slate-600 mb-1">
+        Contenedor seleccionado
+      </label>
+      <input id="dropContainer" type="text" readonly
+        placeholder="Selecciona un contenedor en el mapa"
+        class="w-full bg-slate-50 border border-slate-200
+        rounded-xl p-3 text-sm">
+    </div>
+
+    <p class="text-xs text-slate-500">
+      Se utilizará el ID del ciudadano ingresado
+      en el formulario de reporte de contenedor.
+    </p>
+
+    <div>
+      <label for="materialType"
+        class="block text-xs font-semibold text-slate-600 mb-1">
+        Tipo de material
+      </label>
+      <select id="materialType" required
+        class="w-full border border-slate-200 rounded-xl p-3 text-sm">
+        <option value="">Selecciona el material</option>
+        <option value="PLASTICO">Plástico</option>
+        <option value="PAPEL">Papel</option>
+        <option value="VIDRIO">Vidrio</option>
+        <option value="METAL">Metal</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="weightRange"
+        class="block text-xs font-semibold text-slate-600 mb-1">
+        Peso estimado
+      </label>
+      <select id="weightRange" required
+        class="w-full border border-slate-200 rounded-xl p-3 text-sm">
+        <option value="">Selecciona un rango</option>
+        <option value="0-5kg">0 a 5 kg</option>
+        <option value="5-10kg">5 a 10 kg</option>
+        <option value="10-20kg">10 a 20 kg</option>
+      </select>
+    </div>
+
+    <button id="dropGoButton" type="submit"
+      class="w-full bg-emerald-600 hover:bg-emerald-700
+      disabled:opacity-50 text-white py-3 rounded-xl
+      font-bold text-sm">
+      Registrar bolsa Drop & Go
+    </button>
+  </form>
+
+  <div id="dropGoMessage" role="status"
+    aria-live="polite" class="hidden p-3 rounded-xl text-sm">
+  </div>
+
+  <div id="packageResult"
+    class="hidden bg-emerald-50 border border-emerald-200
+    rounded-xl p-5 text-center">
+    <p class="text-sm text-emerald-700 font-semibold">
+      Código de seguimiento
+    </p>
+    <p id="packageCode"
+      class="text-2xl font-extrabold text-emerald-900
+      break-all mt-2"></p>
+    <p class="text-xs text-slate-500 mt-2">
+      Guarda este código para identificar tu bolsa.
+    </p>
+  </div>
+
+  <div class="border-t pt-4">
+    <div class="flex items-center justify-between gap-2">
+      <h3 class="font-bold text-slate-800">
+        Mis bolsas registradas
+      </h3>
+      <button id="refreshPackages" type="button"
+        class="text-sm font-semibold text-emerald-700">
+        Actualizar
+      </button>
+    </div>
+
+    <div id="packageList"
+      class="space-y-2 mt-3 text-sm text-slate-600">
+      Introduce tu ID de ciudadano para consultar las bolsas.
+    </div>
+  </div>
+</section>
 
     <footer class="text-center text-xs text-slate-400 pb-4">
       Municipalidad Distrital del Rímac · Proyecto EcoSystem
@@ -158,7 +262,8 @@
   </main>
 
   <script>
-    const API = "http://127.0.0.1:8000/api/v1/containers";
+    const API = "/api/v1/containers";
+    const DROP_GO_API = "/api/v1/drop-and-go";
 
     const map = L.map("map").setView([-12.033, -77.029], 14);
 
@@ -187,7 +292,10 @@
 
     function selectContainer(container) {
       selectedContainer = container;
+
       containerInput.value = `${container.id} - ${container.name}`;
+      document.getElementById("dropContainer").value = `${container.code} - ${container.name}`;
+
       showMessage(`Seleccionaste: ${container.name}`);
     }
 
@@ -208,6 +316,7 @@
         markerLayer.clearLayers();
         selectedContainer = null;
         containerInput.value = "";
+        document.getElementById("dropContainer").value = "";
 
         document.getElementById("total").textContent = active.length;
         document.getElementById("available").textContent =
@@ -354,6 +463,148 @@
 
     document.getElementById("refreshButton")
       .addEventListener("click", loadContainers);
+
+    const dropGoForm = document.getElementById("dropGoForm");
+    const dropGoButton = document.getElementById("dropGoButton");
+
+    function showDropGoMessage(message, error = false) {
+      const element = document.getElementById("dropGoMessage");
+
+      element.textContent = message;
+      element.className = error
+        ? "p-3 rounded-xl text-sm bg-rose-50 text-rose-700"
+        : "p-3 rounded-xl text-sm bg-emerald-50 text-emerald-700";
+    }
+
+    async function registerDropGo(event) {
+      event.preventDefault();
+
+      if (!selectedContainer) {
+        showDropGoMessage(
+          "Selecciona primero un contenedor en el mapa.",
+          true
+        );
+        return;
+      }
+
+      const citizenId = Number(
+        document.getElementById("citizenId").value
+      );
+
+      if (!Number.isSafeInteger(citizenId) || citizenId <= 0) {
+        showDropGoMessage(
+          "Introduce un ID de ciudadano válido.",
+          true
+        );
+        return;
+      }
+
+      const payload = {
+        citizen_id: citizenId,
+        container_code: selectedContainer.code,
+        material_type: document.getElementById("materialType").value,
+        weight_range_declared: document.getElementById("weightRange").value,
+        zone_sector: "Rímac Centro"
+      };
+
+      dropGoButton.disabled = true;
+      dropGoButton.textContent = "Registrando bolsa...";
+
+      try {
+        const response = await fetch(`${DROP_GO_API}/requests`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            typeof result.detail === "string"
+              ? result.detail
+              : `Error HTTP ${response.status}`
+          );
+        }
+
+        document.getElementById("packageCode").textContent =
+          result.package_code;
+
+        document.getElementById("packageResult")
+          .classList.remove("hidden");
+
+        showDropGoMessage("Bolsa registrada correctamente.");
+
+        await loadCitizenPackages();
+
+      } catch (error) {
+        showDropGoMessage(error.message, true);
+      } finally {
+        dropGoButton.disabled = false;
+        dropGoButton.textContent = "Registrar bolsa Drop & Go";
+      }
+    }
+
+    async function loadCitizenPackages() {
+      const list = document.getElementById("packageList");
+      const citizenId = Number(
+        document.getElementById("citizenId").value
+      );
+
+      if (!Number.isSafeInteger(citizenId) || citizenId <= 0) {
+        list.textContent = "Introduce un ID de ciudadano válido.";
+        return;
+      }
+
+      list.textContent = "Consultando bolsas...";
+
+      try {
+        const response = await fetch(
+          `${DROP_GO_API}/requests/citizen/${citizenId}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error HTTP ${response.status}`);
+        }
+
+        const packages = await response.json();
+
+        list.replaceChildren();
+
+        if (packages.length === 0) {
+          list.textContent = "Todavía no tienes bolsas registradas.";
+          return;
+        }
+
+        for (const pkg of packages) {
+          const card = document.createElement("div");
+          card.className =
+            "bg-slate-50 border border-slate-200 rounded-xl p-3";
+
+          const code = document.createElement("p");
+          code.className = "font-bold";
+          code.textContent = pkg.package_code;
+
+          const details = document.createElement("p");
+          details.textContent =
+            `${pkg.material_type} · ${pkg.weight_range_declared}`;
+
+          const status = document.createElement("p");
+          status.textContent = `Estado: ${pkg.status}`;
+
+          card.append(code, details, status);
+          list.appendChild(card);
+        }
+
+      } catch (error) {
+        list.textContent = `Error al consultar bolsas: ${error.message}`;
+      }
+    }
+
+    dropGoForm.addEventListener("submit", registerDropGo);
+
+      document.getElementById("refreshPackages")
+        .addEventListener("click", loadCitizenPackages);
 
     loadContainers();
   </script>
